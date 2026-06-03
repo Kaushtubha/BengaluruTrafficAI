@@ -21,7 +21,7 @@ traffic_state = {
 }
 
 def run_detection():
-    cap = cv2.VideoCapture("ai/dataset/sample_traffic.mp4")
+    cap = cv2.VideoCapture("/Users/Ishant/Volume D/BengaluruTrafficAI/BengaluruTrafficAI/ai/dataset/sample_traffic.mp4")
     lane_keys = ["North", "South", "East", "West"]
     frame_num = 0
     while True:

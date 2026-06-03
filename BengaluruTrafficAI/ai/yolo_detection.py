@@ -57,4 +57,5 @@ def run_detection(source=0):
 
 if __name__ == "__main__":
     # Use 0 for webcam, or give video file path
-    run_detection(source="ai/dataset/sample_traffic.mp4")
+    run_detection(source="/Users/Ishant/Volume D/BengaluruTrafficAI/BengaluruTrafficAI/ai/dataset/sample_traffic.mp4")
+    
