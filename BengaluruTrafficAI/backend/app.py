@@ -1,3 +1,10 @@
+import sys
+sys.path.insert(0, '../ai')
+from violation_detector import check_red_light_violation, get_violations, get_violation_count
+from wrong_side_detector import check_wrong_side, update_track
+from speed_estimator import check_speed_violation
+from snapshot import save_violation_snapshot
+from db_logger import log_violation, log_traffic_stats
 from flask import Flask, jsonify
 from flask_cors import CORS
 import cv2
@@ -15,12 +22,15 @@ traffic_state = {
     "status": "online",
     "junction": "Silk Board, Bengaluru",
     "active_lane": "North",
+    "violation_count": 0,
+    "recent_violations": [],
     "vehicle_counts": {"North": 0, "South": 0, "East": 0, "West": 0},
     "total_vehicles": 0,
     "signal_plan": {"green_times": {}, "priority_lane": "", "cycle_time": 0}
 }
 
 def run_detection():
+    
     cap = cv2.VideoCapture("/Users/Ishant/Volume D/BengaluruTrafficAI/BengaluruTrafficAI/ai/dataset/sample_traffic.mp4")
     lane_keys = ["North", "South", "East", "West"]
     frame_num = 0
@@ -37,7 +47,13 @@ def run_detection():
         traffic_state["total_vehicles"] = sum(traffic_state["vehicle_counts"].values())
         traffic_state["active_lane"] = max(traffic_state["vehicle_counts"], key=traffic_state["vehicle_counts"].get)
         traffic_state["signal_plan"] = get_signal_plan(traffic_state["vehicle_counts"])
-        frame_num += 1
+        frame_num += 1 
+        traffic_state["violation_count"] = get_violation_count()
+        traffic_state["recent_violations"] = [
+            {"type": v["type"], "timestamp": v["timestamp"]}
+            for v in get_violations()[-5:]
+        ]
+        log_traffic_stats(traffic_state["vehicle_counts"], "MEDIUM")
     cap.release()
 
 threading.Thread(target=run_detection, daemon=True).start()
