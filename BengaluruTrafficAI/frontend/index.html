@@ -45,6 +45,11 @@
 </head>
 <body>
     <header>
+     <div id="live-clock"
+     style="color:white;
+            font-size:18px;
+            margin-top:10px;">
+</div>
         <div>
             <h1>🚦 BengaluruTrafficAI</h1>
             <p style="color:#aaa; font-size:0.85rem; margin-top:4px">AI-Powered Traffic Management System</p>
@@ -78,6 +83,29 @@
                 <div class="value" id="south-count">0</div>
                 <div class="label">Vehicles</div>
             </div>
+            <div class="stat-card">
+    <h3>East Lane</h3>
+    <div class="value" id="east-count">0</div>
+    <div class="label">Vehicles</div>
+</div>
+
+<div class="stat-card">
+    <h3>West Lane</h3>
+    <div class="value" id="west-count">0</div>
+    <div class="label">Vehicles</div>
+</div>
+            <div class="stat-card">
+    <h3>Congestion</h3>
+
+    <div class="value" id="congestion-level">
+        LOW
+    </div>
+
+    <div class="label">
+        Traffic Status
+    </div>
+</div>
+
         </div>
 
         <!-- Signal Timings -->
@@ -147,7 +175,19 @@
                     document.getElementById('active-lane').textContent = data.active_lane;
                     document.getElementById('north-count').textContent = data.vehicle_counts.North;
                     document.getElementById('south-count').textContent = data.vehicle_counts.South;
+                    document.getElementById('east-count').textContent = data.vehicle_counts.East;
+                    document.getElementById('west-count').textContent = data.vehicle_counts.West;
                     const counts = data.vehicle_counts;
+                    const total =
+                      counts.North +
+                      counts.South +
+                      counts.East +
+                      counts.West;
+                    let congestion = "LOW";
+                    if (total > 20) congestion = "HIGH";
+                    else if (total > 10) congestion = "MEDIUM";
+                    document.getElementById("congestion-level").textContent = congestion;
+    
                     const max = Math.max(...Object.values(counts)) || 1;
                     ['North','South','East','West'].forEach(lane => {
                         document.getElementById('bar-' + lane.toLowerCase()).textContent = counts[lane];
@@ -173,8 +213,20 @@
                 });
         }
 
+        
         updateDashboard();
-        setInterval(updateDashboard, 3000);
+setInterval(updateDashboard, 3000);
+
+function updateClock() {
+    const now = new Date();
+
+    document.getElementById("live-clock").innerText =
+        "Current Time: " + now.toLocaleTimeString();
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
     </script>
 </body>
 </html>
