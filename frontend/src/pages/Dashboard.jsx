@@ -471,7 +471,8 @@ export default function Dashboard() {
               {/* North Lane vehicles flowing downward */}
               {vehicleCounts.North > 0 && (
                 <motion.circle
-                  cx="92" cy="10" r="2.5" fill="#f59e0b"
+                  cx="92" r="2.5" fill="#f59e0b"
+                  initial={{ cy: 10 }}
                   animate={{ cy: [10, 85, 115, 190] }}
                   transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.North * 0.25), ease: "linear" }}
                 />
@@ -479,7 +480,8 @@ export default function Dashboard() {
               {/* South Lane vehicles flowing upward */}
               {vehicleCounts.South > 0 && (
                 <motion.circle
-                  cx="108" cy="190" r="2.5" fill="#3b82f6"
+                  cx="108" r="2.5" fill="#3b82f6"
+                  initial={{ cy: 190 }}
                   animate={{ cy: [190, 115, 85, 10] }}
                   transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.South * 0.25), ease: "linear" }}
                 />
@@ -487,7 +489,8 @@ export default function Dashboard() {
               {/* East Lane vehicles flowing westward */}
               {vehicleCounts.East > 0 && (
                 <motion.circle
-                  cx="190" cy="92" r="2.5" fill="#10b981"
+                  cy="92" r="2.5" fill="#10b981"
+                  initial={{ cx: 190 }}
                   animate={{ cx: [190, 115, 85, 10] }}
                   transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.East * 0.25), ease: "linear" }}
                 />
@@ -495,7 +498,8 @@ export default function Dashboard() {
               {/* West Lane vehicles flowing eastward */}
               {vehicleCounts.West > 0 && (
                 <motion.circle
-                  cx="10" cy="108" r="2.5" fill="#ec4899"
+                  cy="108" r="2.5" fill="#ec4899"
+                  initial={{ cx: 10 }}
                   animate={{ cx: [10, 85, 115, 190] }}
                   transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.West * 0.25), ease: "linear" }}
                 />
