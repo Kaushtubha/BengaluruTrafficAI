@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
-  LayoutDashboard, Sun, Moon, Menu, X, Zap, ChevronRight,
+  LayoutDashboard, Sun, Moon, Menu, X, Radar, ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ParticleBackground from './ParticleBackground';
@@ -24,7 +24,7 @@ export default function Layout({ children }) {
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex text-slate-900 dark:text-slate-200 font-sans relative overflow-hidden bg-gradient-to-br from-[#f4f7fb] via-[#ffffff] to-[#fff0f3] dark:from-[#080b14] dark:via-[#0c111c] dark:to-[#170a11] transition-colors duration-500">
+    <div className="min-h-screen flex text-slate-900 dark:text-slate-200 font-sans relative overflow-hidden bg-gradient-to-br from-[#f4f7fb] via-[#ffffff] to-[#fff5f0] dark:from-[#080b14] dark:via-[#0c111c] dark:to-[#1a0f0a] transition-colors duration-500">
 
       {/* ── Background system ─────────────────────────────────── */}
       <ParticleBackground />
@@ -41,14 +41,14 @@ export default function Layout({ children }) {
             whileHover={{ scale: 1.08, rotate: 5 }}
             whileTap={{ scale: 0.94 }}
             className="relative w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg,#00ff88 0%,#00bfff 100%)', boxShadow: '0 4px 16px rgba(0,255,136,0.3)' }}
+            style={{ background: 'linear-gradient(135deg,#ff9f1c 0%,#ff3b30 100%)', boxShadow: '0 4px 16px rgba(255,159,28,0.3)' }}
           >
-            <Zap size={18} className="text-white fill-white" />
+            <Radar size={18} className="text-white fill-white/20" />
             <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
           </motion.div>
           <div>
-            <h1 className="font-display font-bold text-base text-slate-900 dark:text-white leading-none tracking-tight">TrafficAI</h1>
-            <span className="text-[10px] font-semibold tracking-[0.12em] text-emerald-500 uppercase block mt-0.5">Control System</span>
+            <h1 className="font-display font-bold text-base text-slate-900 dark:text-white leading-none tracking-tight">BLR TrafficAI</h1>
+            <span className="text-[10px] font-semibold tracking-[0.12em] text-amber-500 uppercase block mt-0.5">Control Center</span>
           </div>
         </div>
 
@@ -67,7 +67,7 @@ export default function Layout({ children }) {
                 to={path}
                 className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200 relative group ${
                   active
-                    ? 'text-emerald-600 dark:text-white'
+                    ? 'text-amber-600 dark:text-white'
                     : 'text-slate-500 dark:text-dark-400 hover:text-slate-800 dark:hover:text-dark-100'
                 }`}
               >
@@ -76,8 +76,8 @@ export default function Layout({ children }) {
                     layoutId="sidebar-pill"
                     className="absolute inset-0 rounded-xl nav-active-glow"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(0,255,136,0.08) 0%, rgba(0,255,136,0.04) 100%)',
-                      border: '1px solid rgba(0,255,136,0.15)',
+                      background: 'linear-gradient(135deg, rgba(249,115,22,0.08) 0%, rgba(249,115,22,0.04) 100%)',
+                      border: '1px solid rgba(249,115,22,0.15)',
                     }}
                     transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}
                   />
@@ -89,8 +89,8 @@ export default function Layout({ children }) {
 
                 <div className={`relative z-10 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200 ${
                   active
-                    ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-500'
-                    : 'bg-slate-100/80 dark:bg-dark-800/60 text-slate-400 dark:text-dark-500 group-hover:bg-slate-200/60 dark:group-hover:bg-dark-700/60 group-hover:text-emerald-500'
+                    ? 'bg-amber-500/15 dark:bg-amber-500/20 text-amber-500'
+                    : 'bg-slate-100/80 dark:bg-dark-800/60 text-slate-400 dark:text-dark-500 group-hover:bg-slate-200/60 dark:group-hover:bg-dark-700/60 group-hover:text-amber-500'
                 }`}>
                   <Icon size={15} />
                 </div>
@@ -100,7 +100,7 @@ export default function Layout({ children }) {
                   <p className="text-[11px] text-slate-400 dark:text-dark-600 mt-0.5 truncate">{sub}</p>
                 </div>
 
-                {active && <ChevronRight size={13} className="relative z-10 text-emerald-500 shrink-0" />}
+                {active && <ChevronRight size={13} className="relative z-10 text-amber-500 shrink-0" />}
               </Link>
             );
           })}
@@ -111,17 +111,17 @@ export default function Layout({ children }) {
           {/* System status */}
           <div className={`px-3.5 py-3 rounded-xl border transition-all ${
             systemStatus === 'ACTIVE'
-              ? 'bg-emerald-500/5 border-emerald-500/15'
+              ? 'bg-amber-500/5 border-amber-500/15'
               : 'bg-rose-500/5 border-rose-500/15'
           }`}>
             <div className="flex items-center gap-2 mb-1">
               <span className={`w-1.5 h-1.5 rounded-full block ${
                 systemStatus === 'ACTIVE' 
-                  ? 'bg-emerald-400 shadow-[0_0_6px_#00ff88] animate-pulse' 
+                  ? 'bg-amber-400 shadow-[0_0_6px_#ff9f1c] animate-pulse' 
                   : 'bg-rose-400 shadow-[0_0_6px_#ff3b3b]'
               }`} />
               <span className={`text-[10px] font-semibold uppercase tracking-wider ${
-                systemStatus === 'ACTIVE' ? 'text-emerald-400' : 'text-rose-400'
+                systemStatus === 'ACTIVE' ? 'text-amber-400' : 'text-rose-400'
               }`}>{systemStatus === 'ACTIVE' ? 'Live' : 'Offline'}</span>
             </div>
             <p className="text-xs font-medium text-slate-600 dark:text-dark-300">
@@ -137,7 +137,7 @@ export default function Layout({ children }) {
               whileHover={{ scale: 1.08, rotate: 8 }} whileTap={{ scale: 0.92, rotate: -8 }}
               onClick={toggleTheme}
               className="p-1.5 rounded-lg bg-white dark:bg-dark-700 border border-slate-200/70 dark:border-dark-600/60
-                text-emerald-500 shadow-sm hover:shadow-glow-sm transition-all"
+                text-amber-500 shadow-sm hover:shadow-glow-sm transition-all"
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div key={theme}
@@ -154,7 +154,7 @@ export default function Layout({ children }) {
 
         {/* Version */}
         <div className="px-5 pb-4 pt-1">
-          <p className="text-[10px] font-mono text-slate-300/50 dark:text-dark-700">v1.0.0 · TrafficAI Portal</p>
+          <p className="text-[10px] font-mono text-slate-300/50 dark:text-dark-700">v1.0.0 · BLR Control Hub</p>
         </div>
       </aside>
 
@@ -164,10 +164,10 @@ export default function Layout({ children }) {
         border-b border-slate-200/60 dark:border-white/[0.05]">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg,#00ff88,#00bfff)', boxShadow: '0 3px 12px rgba(0,255,136,0.3)' }}>
-            <Zap size={14} className="text-white fill-white" />
+            style={{ background: 'linear-gradient(135deg,#ff9f1c,#ff3b30)', boxShadow: '0 3px 12px rgba(255,159,28,0.3)' }}>
+            <Radar size={14} className="text-white fill-white/20" />
           </div>
-          <span className="font-display font-bold text-base text-slate-900 dark:text-white">TrafficAI</span>
+          <span className="font-display font-bold text-base text-slate-900 dark:text-white">BLR TrafficAI</span>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={toggleTheme}
@@ -199,12 +199,12 @@ export default function Layout({ children }) {
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/60 dark:border-white/[0.05]">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg,#00ff88,#00bfff)', boxShadow: '0 4px 14px rgba(0,255,136,0.3)' }}>
-                    <Zap size={16} className="text-white fill-white" />
+                    style={{ background: 'linear-gradient(135deg,#ff9f1c,#ff3b30)', boxShadow: '0 4px 14px rgba(255,159,28,0.3)' }}>
+                    <Radar size={16} className="text-white fill-white/20" />
                   </div>
                   <div>
-                    <p className="font-display font-bold text-slate-900 dark:text-white text-base leading-none">TrafficAI</p>
-                    <p className="text-[10px] text-emerald-500 font-semibold tracking-wider uppercase mt-0.5">Control System</p>
+                    <p className="font-display font-bold text-slate-900 dark:text-white text-base leading-none">BLR TrafficAI</p>
+                    <p className="text-[10px] text-amber-500 font-semibold tracking-wider uppercase mt-0.5">Control Center</p>
                   </div>
                 </div>
                 <button onClick={() => setMobileOpen(false)}
@@ -226,10 +226,10 @@ export default function Layout({ children }) {
                       {active && (
                         <motion.div layoutId="mobile-pill"
                           className="absolute inset-0 rounded-xl"
-                          style={{ background:'rgba(0,255,136,0.08)', border:'1px solid rgba(0,255,136,0.15)' }}
+                          style={{ background:'rgba(249,115,22,0.08)', border:'1px solid rgba(249,115,22,0.15)' }}
                           transition={{ type:'spring', stiffness:380, damping:32 }} />
                       )}
-                      <Icon size={18} className={`relative z-10 ${active ? 'text-emerald-500' : ''}`} />
+                      <Icon size={18} className={`relative z-10 ${active ? 'text-amber-500' : ''}`} />
                       <span className="relative z-10">{name}</span>
                     </Link>
                   );

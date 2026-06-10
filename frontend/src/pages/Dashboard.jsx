@@ -100,10 +100,10 @@ export default function Dashboard() {
       >
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-emerald-500">
+            <span className="text-amber-500">
               <Sparkles size={13} className="animate-pulse" />
             </span>
-            <span className="text-[11px] font-bold tracking-[0.15em] text-emerald-400 uppercase text-glow">
+            <span className="text-[11px] font-bold tracking-[0.15em] text-amber-400 uppercase text-glow">
               Junction Operations
             </span>
             <span className="w-1 h-1 rounded-full bg-slate-700 mx-1"></span>
@@ -136,12 +136,12 @@ export default function Dashboard() {
           
           <div className={`status-badge border transition-all ${
             systemStatus === 'ACTIVE' 
-              ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' 
+              ? 'bg-amber-500/5 border-amber-500/20 text-amber-400' 
               : 'bg-rose-500/5 border-rose-500/20 text-rose-400'
           }`}>
             <span className={`w-2 h-2 rounded-full ${
               systemStatus === 'ACTIVE' 
-                ? 'bg-emerald-400 shadow-[0_0_10px_#00ff88] animate-pulse' 
+                ? 'bg-amber-400 shadow-[0_0_10px_#ff9f1c] animate-pulse' 
                 : 'bg-rose-400 shadow-[0_0_10px_#ff3b3b]'
             }`} />
             <span className="font-mono text-xs font-semibold tracking-wider">{systemStatus}</span>
@@ -161,10 +161,10 @@ export default function Dashboard() {
             label: 'Total Vehicles', icon: CarFront,
             value: trafficData.total_vehicles || 0,
             sub: 'Active count now',
-            accent: 'from-emerald-500/5 to-transparent',
-            iconColor: 'text-emerald-400',
-            iconBg: 'bg-emerald-500/10',
-            glow: 'hover:shadow-[0_24px_50px_-12px_rgba(0,255,136,0.15)] hover:border-emerald-500/30',
+            accent: 'from-amber-500/5 to-transparent',
+            iconColor: 'text-amber-400',
+            iconBg: 'bg-amber-500/10',
+            glow: 'hover:shadow-[0_24px_50px_-12px_rgba(249,115,22,0.15)] hover:border-amber-500/30',
           },
           {
             label: 'Active Lane', icon: Navigation,
@@ -265,7 +265,7 @@ export default function Dashboard() {
         </div>
         <div className="mt-5 pt-4 border-t border-white/[0.03] flex justify-between items-center text-xs text-slate-400">
           <span>Adaptive Signal Plan Optimization Loop</span>
-          <span>Total Cycle Time: <span className="font-mono font-bold text-emerald-400" id="cycle-time">{signalData.cycle_time}s</span></span>
+          <span>Total Cycle Time: <span className="font-mono font-bold text-amber-400" id="cycle-time">{signalData.cycle_time}s</span></span>
         </div>
       </motion.div>
 
@@ -297,14 +297,14 @@ export default function Dashboard() {
                 <div key={key} className="space-y-2">
                   <div className="flex justify-between text-xs font-semibold text-slate-400">
                     <span>{label}</span>
-                    <span className="font-mono text-emerald-400">{count}</span>
+                    <span className="font-mono text-amber-400">{count}</span>
                   </div>
                   <div className="h-2.5 bg-white/[0.02] border border-white/[0.03] rounded-full overflow-hidden relative">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${percent}%` }}
                       transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className="h-full bg-gradient-to-r from-sky-500 to-emerald-400 rounded-full shadow-[0_0_10px_rgba(0,255,136,0.15)] relative overflow-hidden"
+                      className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.15)] relative overflow-hidden"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shine" style={{ backgroundSize: '200% 100%' }} />
                     </motion.div>
@@ -339,18 +339,18 @@ export default function Dashboard() {
                   key={key}
                   className={`border-2 rounded-2xl p-4 flex flex-col items-center justify-center transition-all duration-300 ${
                     active 
-                      ? 'border-emerald-500/40 bg-emerald-500/[0.02] shadow-[0_0_20px_rgba(0,255,136,0.04)]' 
+                      ? 'border-amber-500/40 bg-amber-500/[0.02] shadow-[0_0_20px_rgba(249,115,22,0.04)]' 
                       : 'border-white/[0.03] bg-white/[0.005]'
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
                     active 
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(0,255,136,0.2)]' 
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(249,115,22,0.2)]' 
                       : 'bg-rose-500/5 border-rose-500/15 text-rose-400 shadow-[0_0_10px_rgba(255,59,59,0.05)]'
                   }`}>
                     {arrow}
                   </div>
-                  <div className={`font-mono font-bold text-xl mt-3 ${active ? 'text-emerald-400 text-glow' : 'text-slate-200'}`}>
+                  <div className={`font-mono font-bold text-xl mt-3 ${active ? 'text-amber-400 text-glow' : 'text-slate-200'}`}>
                     {vehicleCounts[key] || 0}
                   </div>
                   <div className="text-[9px] font-bold text-slate-400 tracking-wider mt-2">{label}</div>
@@ -365,12 +365,12 @@ export default function Dashboard() {
       <motion.div 
         variants={rise}
         whileHover={{ y: -4, transition: { duration: 0.3 } }}
-        className="glass-panel rounded-2xl p-6 border border-white/[0.05] h-[260px] flex flex-col group hover:shadow-[0_24px_50px_-12px_rgba(0,255,136,0.08)] hover:border-emerald-500/30 transition-all duration-300"
+        className="glass-panel rounded-2xl p-6 border border-white/[0.05] h-[260px] flex flex-col group hover:shadow-[0_24px_50px_-12px_rgba(249,115,22,0.08)] hover:border-amber-500/30 transition-all duration-300"
       >
         <div className="flex items-center justify-between mb-4 shrink-0">
           <div>
             <h3 className="font-display font-bold text-slate-200 flex items-center gap-2 text-sm uppercase tracking-widest">
-              <TrendingUp size={15} className="text-emerald-500" /> Vehicle Count Stream History
+              <TrendingUp size={15} className="text-amber-500" /> Vehicle Count Stream History
             </h3>
             <p className="text-[10px] text-slate-400 mt-1">Live tracking data history of total junction density</p>
           </div>
@@ -383,21 +383,21 @@ export default function Dashboard() {
               <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }}>
                 <defs>
                   <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00ff88" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#00ff88" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
                 <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#64748b', fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 9, fill: '#64748b', fontFamily: 'Space Mono' }} tickLine={false} axisLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(0, 255, 136, 0.2)', strokeWidth: 1.5, strokeDasharray: '5 3' }} />
+                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(249, 115, 22, 0.2)', strokeWidth: 1.5, strokeDasharray: '5 3' }} />
                 <Area 
                   type="monotone" 
                   dataKey="vehicles" 
-                  stroke="#00ff88" 
+                  stroke="#f97316" 
                   strokeWidth={2}
                   fill="url(#areaGrad)"
-                  activeDot={{ r: 4, fill: '#00ff88', stroke: '#fff', strokeWidth: 1.5 }} 
+                  activeDot={{ r: 4, fill: '#f97316', stroke: '#fff', strokeWidth: 1.5 }} 
                 />
               </AreaChart>
             </ResponsiveContainer>
