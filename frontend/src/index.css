@@ -277,3 +277,70 @@ select option {
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.3); border-radius: 2px; }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.6); }
+
+/* ═══════════════════════════════════════════════════════════
+   LIGHT MODE COMPREHENSIVE VISIBILITY FIXES
+   Near-white text classes are invisible on white — override all.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Text color overrides ─────────────────────────────────── */
+html:not(.dark) .text-slate-200 { color: #334155; }  /* slate-700 */
+html:not(.dark) .text-slate-300 { color: #475569; }  /* slate-600 */
+
+/* White text inside cards → near-black in light mode */
+html:not(.dark) .glass-panel .text-white,
+html:not(.dark) .glass-card  .text-white  { color: #0f172a; }
+
+/* Section heading h3s inside panels */
+html:not(.dark) .glass-panel h3,
+html:not(.dark) .glass-card  h3 { color: #1e293b; }
+
+/* ── KPI bar dividers ──────────────────────────────────────── */
+html:not(.dark) .glass-panel  { border-color: rgba(0,0,0,0.08); }
+html:not(.dark) .glass-card   { border-color: rgba(0,0,0,0.08); }
+
+/* ── Progress bar tracks (nearly invisible bg) ─────────────── */
+html:not(.dark) .glass-panel [class*="bg-white/"] {
+  background-color: rgba(0,0,0,0.05) !important;
+}
+
+/* ── Signal lane status mini cards ─────────────────────────── */
+html:not(.dark) [class*="border-white/"] {
+  border-color: rgba(0,0,0,0.1) !important;
+}
+
+/* ── Violation terminal — darken bg, lighten text ─────────── */
+html:not(.dark) .bg-black\/60 {
+  background-color: rgba(15,23,42,0.05) !important;
+  border-color: rgba(0,0,0,0.1)         !important;
+}
+html:not(.dark) .bg-black\/60 span { color: #334155 !important; }
+
+/* ── Adaptive timing section card bg ───────────────────────── */
+html:not(.dark) .glass-panel > div [class*="bg-white/"] {
+  background-color: rgba(0,0,0,0.04) !important;
+}
+
+/* ── Emergency button idle state ──────────────────────────── */
+html:not(.dark) button[class*="border-white/"] {
+  border-color: rgba(0,0,0,0.15) !important;
+  background-color: rgba(0,0,0,0.03) !important;
+  color: #334155 !important;
+}
+html:not(.dark) button[class*="border-white/"]:hover {
+  background-color: rgba(0,0,0,0.07) !important;
+}
+
+/* ── Junction Radar Visualizer container ─────────────────── */
+html:not(.dark) .bg-slate-950\/80 {
+  background-color: rgba(241,245,249,0.95) !important;
+}
+
+/* ── Recharts chart grid + axis in light ──────────────────── */
+html:not(.dark) .recharts-cartesian-grid line { stroke: rgba(0,0,0,0.06) !important; }
+html:not(.dark) .recharts-text { fill: #64748b !important; }
+
+/* ── Scrollbar light mode ──────────────────────────────────── */
+html:not(.dark) ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
+html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.5); }
+
