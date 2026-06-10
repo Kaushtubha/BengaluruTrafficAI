@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import {
   Clock, TrendingUp, Sparkles, Layers, Activity,
   ArrowUpRight, AlertCircle, RefreshCw, Milestone,
-  Navigation, CarFront
+  Navigation, CarFront, ShieldAlert, Cpu
 } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -47,9 +47,19 @@ const rise    = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, trans
 
 /* ─────────────────────────────────────────── */
 export default function Dashboard() {
-  const { trafficData, signalData, history, systemStatus, fetchTrafficData } = useStore();
+  const { 
+    trafficData, 
+    signalData, 
+    violationsData, 
+    history, 
+    systemStatus, 
+    fetchTrafficData, 
+    simulateEmergency 
+  } = useStore();
+
   const [refreshing, setRefreshing] = useState(false);
   const [time, setTime] = useState(new Date());
+  const [activeOverride, setActiveOverride] = useState(null);
 
   // Dynamic violation logs state
   const [violationLogs, setViolationLogs] = useState([
@@ -86,7 +96,6 @@ export default function Dashboard() {
       const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
       
       setViolationLogs(prev => {
-        // avoid adding duplicate log if we just updated within 1 second
         if (prev.length > 0 && prev[0].msg.split('|')[0] === selected.msg().split('|')[0] && Math.random() > 0.3) {
           return prev;
         }
@@ -112,6 +121,18 @@ export default function Dashboard() {
     toast.success('Junction data synchronized');
   };
 
+  const handleTriggerEmergency = async (lane) => {
+    setActiveOverride(lane);
+    await simulateEmergency(lane);
+    toast.success(`Priority override requested: ${lane} Lane`);
+  };
+
+  const handleClearOverride = async () => {
+    setActiveOverride(null);
+    await simulateEmergency(null);
+    toast.success('Simulated priorities cleared');
+  };
+
   // Safe variables mapping
   const vehicleCounts = trafficData.vehicle_counts || { North: 0, South: 0, East: 0, West: 0 };
   const greenTimes = signalData.green_times || { North: 0, South: 0, East: 0, West: 0 };
@@ -122,6 +143,8 @@ export default function Dashboard() {
     time: h.time,
     vehicles: h.vehicles,
   }));
+
+  const totalViolations = violationsData.total_violations || trafficData.violations || 0;
 
   return (
     <div className="space-y-7 pb-12">
@@ -230,8 +253,8 @@ export default function Dashboard() {
           },
           {
             label: 'Violations', icon: AlertCircle,
-            value: trafficData.violations || 0,
-            sub: 'Red Light Jumps',
+            value: totalViolations,
+            sub: 'Cumulated alerts',
             accent: 'from-rose-500/5 to-transparent',
             iconColor: 'text-rose-400',
             iconBg: 'bg-rose-500/10',
@@ -519,8 +542,110 @@ export default function Dashboard() {
             ))}
           </div>
           <div className="mt-3 text-[10px] text-slate-500 flex justify-between items-center">
-            <span>Logged Events ({trafficData.violations || 0})</span>
+            <span>Logged Events ({totalViolations})</span>
             <span>Auto-refreshing</span>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* ── Advanced Control Panels & Detailed Analytics ── */}
+      <motion.div 
+        variants={stagger} 
+        initial="hidden" 
+        animate="show"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      >
+        {/* Interactive Simulation Controls */}
+        <motion.div 
+          variants={rise}
+          className="glass-panel rounded-2xl p-6 border border-white/[0.05]"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Cpu size={16} className="text-amber-400" />
+            <h3 className="font-display font-bold text-slate-200 text-sm uppercase tracking-widest">
+              🎛️ Priority Signal Simulation Override
+            </h3>
+          </div>
+          <p className="text-xs text-slate-400 mb-5 leading-relaxed">
+            Click any lane below to simulate an active Emergency Vehicle (Ambulance / Fire Truck) approaching the junction. The smart signaling processor will instantly override the active sequence to prioritize safety.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {[
+              { name: 'North Lane 🚑', val: 'North' },
+              { name: 'South Lane 🚑', val: 'South' },
+              { name: 'East Lane 🚒', val: 'East' },
+              { name: 'West Lane 🚒', val: 'West' }
+            ].map(({ name, val }) => {
+              const active = activeOverride === val;
+              return (
+                <button
+                  key={val}
+                  onClick={() => handleTriggerEmergency(val)}
+                  className={`px-4 py-3 rounded-xl border font-sans font-semibold text-xs transition-all duration-200 active:scale-95 ${
+                    active 
+                      ? 'bg-amber-500 text-white border-amber-600 shadow-[0_0_12px_rgba(249,115,22,0.3)]' 
+                      : 'border-white/[0.04] bg-white/[0.015] text-slate-300 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+          
+          <button
+            onClick={handleClearOverride}
+            disabled={!activeOverride}
+            className="w-full py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/5 text-rose-400 font-semibold text-xs transition-all hover:bg-rose-500/10 active:scale-98 disabled:opacity-30 disabled:pointer-events-none"
+          >
+            Clear Override Protocols
+          </button>
+        </motion.div>
+
+        {/* Violations Categories Analytics progress bars */}
+        <motion.div 
+          variants={rise}
+          className="glass-panel rounded-2xl p-6 border border-white/[0.05]"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <ShieldAlert size={16} className="text-rose-400" />
+              <h3 className="font-display font-bold text-slate-200 text-sm uppercase tracking-widest">
+                📊 Traffic Violation Breakdown
+              </h3>
+            </div>
+            <span className="text-[10px] font-mono font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full">
+              Live Categories
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              { label: '🔴 Red Light Jump Violations', val: violationsData.red_light || 0, max: 100, color: 'from-red-500 to-rose-400' },
+              { label: '🚗 Wrong Side Driving Alerts', val: violationsData.wrong_side || 0, max: 100, color: 'from-orange-500 to-amber-400' },
+              { label: '⚡ Speed Limit Overriding Speeders', val: violationsData.speeding || 0, max: 100, color: 'from-yellow-500 to-yellow-300' },
+              { label: '🪖 Rider Without Helmet Checks', val: violationsData.no_helmet || 0, max: 100, color: 'from-indigo-500 to-purple-400' }
+            ].map(({ label, val, color }) => {
+              // Calculate percent of total violations safely
+              const percent = totalViolations > 0 ? (val / totalViolations) * 100 : 0;
+              return (
+                <div key={label} className="space-y-1.5">
+                  <div className="flex justify-between text-xs text-slate-400 font-medium">
+                    <span>{label}</span>
+                    <span className="font-mono font-bold text-slate-200">{val}</span>
+                  </div>
+                  <div className="h-2 bg-white/[0.015] border border-white/[0.03] rounded-full overflow-hidden relative">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${percent || 2}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className={`h-full bg-gradient-to-r ${color} rounded-full`}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </motion.div>
       </motion.div>

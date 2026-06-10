@@ -48,6 +48,7 @@ VEHICLE_CLASSES = {
 }
 
 tracked_vehicle_ids = set()
+simulated_emergency_lane = None
 
 traffic_state = {
     "status": "online",
@@ -192,6 +193,12 @@ def run_detection():
                 if lane not in emergency_lanes:
                     emergency_lanes.append(lane)
 
+        # 6. Simulated Emergency Overrides from Frontend
+        global simulated_emergency_lane
+        if simulated_emergency_lane:
+            if simulated_emergency_lane not in emergency_lanes:
+                emergency_lanes.append(simulated_emergency_lane)
+
         # Update stats
         traffic_state["vehicle_counts"] = lane_counts
         traffic_state["total_vehicles"] = sum(lane_counts.values())
@@ -267,6 +274,20 @@ def get_violations():
         "speeding": get_speed_violation_count(),
         "no_helmet": get_helmet_violation_count()
     })
+
+
+@app.route('/api/simulate_emergency', methods=['POST'])
+def simulate_emergency():
+    global simulated_emergency_lane
+    from flask import request
+    data = request.json or {}
+    lane = data.get('lane')
+    if lane in ["North", "South", "East", "West"]:
+        simulated_emergency_lane = lane
+        return jsonify({"status": "success", "message": f"Simulated emergency vehicle in {lane} lane."})
+    else:
+        simulated_emergency_lane = None
+        return jsonify({"status": "success", "message": "Simulated emergency overrides cleared."})
 
 
 if __name__ == '__main__':
