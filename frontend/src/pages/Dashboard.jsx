@@ -34,7 +34,7 @@ function ChartTooltip({ active, payload, label }) {
   return (
     <div className="glass-card px-4 py-3 rounded-xl text-xs shadow-glass-dark border border-white/10">
       <p className="text-slate-400 mb-1 font-medium">{label}</p>
-      <p className="font-bold text-emerald-400 text-sm">
+      <p className="font-bold text-amber-400 text-sm">
         {payload[0].value} vehicles
       </p>
     </div>
@@ -51,6 +51,14 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [time, setTime] = useState(new Date());
 
+  // Dynamic violation logs state
+  const [violationLogs, setViolationLogs] = useState([
+    { id: 1, msg: "Speeding detected: Vehicle #142 | North Lane | 78 km/h", time: "02:50:11", type: "speed" },
+    { id: 2, msg: "Helmet violation: Motorcycle #91 | South Lane", time: "02:49:58", type: "helmet" },
+    { id: 3, msg: "Wrong-side driving: Car #204 | West Lane", time: "02:49:34", type: "wrong" },
+    { id: 4, msg: "Red light jump: Bus #112 | East Lane", time: "02:48:50", type: "red" }
+  ]);
+
   // Digital Clock ticking
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -63,6 +71,32 @@ export default function Dashboard() {
     fetchTrafficData(); // Initial load
     return () => clearInterval(interval);
   }, []);
+
+  // Sync state violations with scrolling terminal log
+  useEffect(() => {
+    if (trafficData.violations > 0) {
+      const types = [
+        { type: "speed", msg: () => `Speeding detected: Vehicle #` + Math.floor(Math.random() * 200 + 100) + ` | ` + ["North", "South", "East", "West"][Math.floor(Math.random()*4)] + ` Lane | ` + Math.floor(Math.random()*30 + 70) + ` km/h` },
+        { type: "helmet", msg: () => `Helmet violation: Motorcycle #` + Math.floor(Math.random() * 200 + 100) + ` | ` + ["North", "South", "East", "West"][Math.floor(Math.random()*4)] + ` Lane` },
+        { type: "wrong", msg: () => `Wrong-side driving: Car #` + Math.floor(Math.random() * 200 + 100) + ` | ` + ["North", "South", "East", "West"][Math.floor(Math.random()*4)] + ` Lane` },
+        { type: "red", msg: () => `Red light jump: Vehicle #` + Math.floor(Math.random() * 200 + 100) + ` | ` + ["North", "South", "East", "West"][Math.floor(Math.random()*4)] + ` Lane` }
+      ];
+      const selected = types[Math.floor(Math.random() * types.length)];
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+      
+      setViolationLogs(prev => {
+        // avoid adding duplicate log if we just updated within 1 second
+        if (prev.length > 0 && prev[0].msg.split('|')[0] === selected.msg().split('|')[0] && Math.random() > 0.3) {
+          return prev;
+        }
+        return [
+          { id: Date.now(), msg: selected.msg(), time: timeStr, type: selected.type },
+          ...prev.slice(0, 9)
+        ];
+      });
+    }
+  }, [trafficData.violations]);
 
   const getGreeting = () => {
     const hour = time.getHours();
@@ -269,94 +303,224 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-      {/* ── 2-Column Metrics Grid ────────────────────────── */}
+      {/* ── 3-Column Operations Grid ────────────────────── */}
       <motion.div 
         variants={stagger} 
         initial="hidden" 
         animate="show"
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
       >
-        {/* Lane Distribution Bars */}
+        {/* Column 1: Info Metrics (Lanes & Signals) */}
+        <div className="space-y-6">
+          {/* Lane Distribution Bars */}
+          <motion.div 
+            variants={rise}
+            className="glass-panel rounded-2xl p-6 border border-white/[0.05]"
+          >
+            <h3 className="font-display font-bold text-slate-200 flex items-center gap-2 text-sm mb-5 uppercase tracking-widest">
+              📊 Lane Traffic Distribution
+            </h3>
+            <div className="space-y-4">
+              {[
+                { label: '🔼 North Lane', key: 'North' },
+                { label: '🔽 South Lane', key: 'South' },
+                { label: '▶️ East Lane', key: 'East' },
+                { label: '◀️ West Lane', key: 'West' },
+              ].map(({ label, key }) => {
+                const count = vehicleCounts[key] || 0;
+                const percent = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                return (
+                  <div key={key} className="space-y-2">
+                    <div className="flex justify-between text-xs font-semibold text-slate-400">
+                      <span>{label}</span>
+                      <span className="font-mono text-amber-400">{count}</span>
+                    </div>
+                    <div className="h-2.5 bg-white/[0.02] border border-white/[0.03] rounded-full overflow-hidden relative">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percent}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.15)] relative overflow-hidden"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shine" style={{ backgroundSize: '200% 100%' }} />
+                      </motion.div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="text-[11px] text-slate-500 text-right mt-5">
+              Last Sync: {time.toLocaleTimeString('en-US', { hour12: false })}
+            </div>
+          </motion.div>
+
+          {/* Junction Monitor Grid */}
+          <motion.div 
+            variants={rise}
+            className="glass-panel rounded-2xl p-6 border border-white/[0.05]"
+          >
+            <h3 className="font-display font-bold text-slate-200 flex items-center gap-2 text-sm mb-4 uppercase tracking-widest">
+              🚦 Signal Lane Status
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'NORTH', key: 'North', arrow: '🔼' },
+                { label: 'SOUTH', key: 'South', arrow: '🔽' },
+                { label: 'EAST', key: 'East', arrow: '▶️' },
+                { label: 'WEST', key: 'West', arrow: '◀️' },
+              ].map(({ label, key, arrow }) => {
+                const active = key === trafficData.active_lane;
+                return (
+                  <div 
+                    key={key}
+                    className={`border rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 ${
+                      active 
+                        ? 'border-amber-500/40 bg-amber-500/[0.02] shadow-[0_0_20px_rgba(249,115,22,0.04)]' 
+                        : 'border-white/[0.03] bg-white/[0.005]'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all ${
+                      active 
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(249,115,22,0.2)]' 
+                        : 'bg-rose-500/5 border-rose-500/15 text-rose-400 shadow-[0_0_10px_rgba(255,59,59,0.05)]'
+                    }`}>
+                      {arrow}
+                    </div>
+                    <div className={`font-mono font-bold text-lg mt-2 ${active ? 'text-amber-400 text-glow' : 'text-slate-200'}`}>
+                      {vehicleCounts[key] || 0}
+                    </div>
+                    <div className="text-[8px] font-bold text-slate-400 tracking-wider mt-1">{label}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Column 2: Interactive Junction Visualizer (Dynamic SVG Map) */}
         <motion.div 
           variants={rise}
-          className="glass-panel rounded-2xl p-6 border border-white/[0.05]"
+          className="glass-panel rounded-2xl p-6 border border-white/[0.05] flex flex-col items-center justify-between"
         >
-          <h3 className="font-display font-bold text-slate-200 flex items-center gap-2 text-sm mb-5 uppercase tracking-widest">
-            📊 Lane Traffic Distribution
-          </h3>
-          <div className="space-y-4">
-            {[
-              { label: '🔼 North Lane', key: 'North' },
-              { label: '🔽 South Lane', key: 'South' },
-              { label: '▶️ East Lane', key: 'East' },
-              { label: '◀️ West Lane', key: 'West' },
-            ].map(({ label, key }) => {
-              const count = vehicleCounts[key] || 0;
-              const percent = maxCount > 0 ? (count / maxCount) * 100 : 0;
-              return (
-                <div key={key} className="space-y-2">
-                  <div className="flex justify-between text-xs font-semibold text-slate-400">
-                    <span>{label}</span>
-                    <span className="font-mono text-amber-400">{count}</span>
-                  </div>
-                  <div className="h-2.5 bg-white/[0.02] border border-white/[0.03] rounded-full overflow-hidden relative">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${percent}%` }}
-                      transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.15)] relative overflow-hidden"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shine" style={{ backgroundSize: '200% 100%' }} />
-                    </motion.div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="w-full mb-3 flex items-center justify-between">
+            <h3 className="font-display font-bold text-slate-200 text-sm uppercase tracking-widest">
+              🗺️ Junction Radar Visualizer
+            </h3>
+            <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+              Live Simulation
+            </span>
           </div>
-          <div className="text-[11px] text-slate-500 text-right mt-5">
-            Last Sync: {time.toLocaleTimeString('en-US', { hour12: false })}
+
+          <div className="relative w-full h-full min-h-[260px] bg-slate-950/80 rounded-xl overflow-hidden border border-white/[0.05] flex items-center justify-center">
+            {/* SVG Intersection Map */}
+            <svg viewBox="0 0 200 200" className="w-full h-full p-2">
+              {/* Intersection background roads */}
+              <rect x="85" y="0" width="30" height="200" fill="#1e293b" opacity="0.6" />
+              <rect x="0" y="85" width="200" height="30" fill="#1e293b" opacity="0.6" />
+              
+              {/* Lane dividers */}
+              <line x1="100" y1="0" x2="100" y2="200" stroke="#475569" strokeDasharray="3 3" />
+              <line x1="0" y1="100" x2="200" y2="100" stroke="#475569" strokeDasharray="3 3" />
+              
+              {/* Crosswalk lines */}
+              <line x1="85" y1="70" x2="115" y2="70" stroke="#94a3b8" strokeWidth="2" strokeDasharray="2 1" />
+              <line x1="85" y1="130" x2="115" y2="130" stroke="#94a3b8" strokeWidth="2" strokeDasharray="2 1" />
+              <line x1="70" y1="85" x2="70" y2="115" stroke="#94a3b8" strokeWidth="2" strokeDasharray="2 1" />
+              <line x1="130" y1="85" x2="130" y2="115" stroke="#94a3b8" strokeWidth="2" strokeDasharray="2 1" />
+
+              {/* Dynamic traffic lights */}
+              {/* North Signal */}
+              <circle cx="75" cy="65" r="4" fill={trafficData.active_lane === "North" ? "#10b981" : "#ef4444"} className={trafficData.active_lane === "North" ? "animate-pulse" : ""} />
+              {/* South Signal */}
+              <circle cx="125" cy="135" r="4" fill={trafficData.active_lane === "South" ? "#10b981" : "#ef4444"} className={trafficData.active_lane === "South" ? "animate-pulse" : ""} />
+              {/* East Signal */}
+              <circle cx="135" cy="75" r="4" fill={trafficData.active_lane === "East" ? "#10b981" : "#ef4444"} className={trafficData.active_lane === "East" ? "animate-pulse" : ""} />
+              {/* West Signal */}
+              <circle cx="65" cy="125" r="4" fill={trafficData.active_lane === "West" ? "#10b981" : "#ef4444"} className={trafficData.active_lane === "West" ? "animate-pulse" : ""} />
+
+              {/* Junction center glow */}
+              <circle cx="100" cy="100" r="12" fill={trafficData.active_lane ? "rgba(249, 115, 22, 0.1)" : "rgba(255,255,255,0.02)"} stroke={trafficData.active_lane ? "#f97316" : "#475569"} strokeWidth="1" />
+              <text x="100" y="102" textAnchor="middle" fill="#f97316" fontSize="6" fontWeight="bold" fontFamily="monospace">
+                {trafficData.active_lane ? trafficData.active_lane[0] : "--"}
+              </text>
+
+              {/* Animated dots representing traffic flowing */}
+              {/* North Lane vehicles flowing downward */}
+              {vehicleCounts.North > 0 && (
+                <motion.circle
+                  cx="92" cy="10" r="2.5" fill="#f59e0b"
+                  animate={{ cy: [10, 85, 115, 190] }}
+                  transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.North * 0.25), ease: "linear" }}
+                />
+              )}
+              {/* South Lane vehicles flowing upward */}
+              {vehicleCounts.South > 0 && (
+                <motion.circle
+                  cx="108" cy="190" r="2.5" fill="#3b82f6"
+                  animate={{ cy: [190, 115, 85, 10] }}
+                  transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.South * 0.25), ease: "linear" }}
+                />
+              )}
+              {/* East Lane vehicles flowing westward */}
+              {vehicleCounts.East > 0 && (
+                <motion.circle
+                  cx="190" cy="92" r="2.5" fill="#10b981"
+                  animate={{ cx: [190, 115, 85, 10] }}
+                  transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.East * 0.25), ease: "linear" }}
+                />
+              )}
+              {/* West Lane vehicles flowing eastward */}
+              {vehicleCounts.West > 0 && (
+                <motion.circle
+                  cx="10" cy="108" r="2.5" fill="#ec4899"
+                  animate={{ cx: [10, 85, 115, 190] }}
+                  transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.West * 0.25), ease: "linear" }}
+                />
+              )}
+            </svg>
+            <div className="absolute bottom-2 left-2 right-2 flex justify-between text-[8px] font-mono text-slate-500">
+              <span>LATENCY: ~30ms</span>
+              <span>RF STATE: {trafficData.congestion_level}</span>
+            </div>
+          </div>
+          <div className="w-full text-center mt-3 text-xs text-slate-400">
+            Active green path: <span className="font-semibold text-emerald-400">{trafficData.active_lane || '--'} Lane</span>
           </div>
         </motion.div>
 
-        {/* Junction Monitor Grid */}
+        {/* Column 3: Real-Time Violation Log Terminal */}
         <motion.div 
           variants={rise}
-          className="glass-panel rounded-2xl p-6 border border-white/[0.05]"
+          className="glass-panel rounded-2xl p-6 border border-white/[0.05] flex flex-col h-full min-h-[360px]"
         >
-          <h3 className="font-display font-bold text-slate-200 flex items-center gap-2 text-sm mb-5 uppercase tracking-widest">
-            🚦 4-Way Junction Signal Status
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: 'NORTH STATUS', key: 'North', arrow: '🔼' },
-              { label: 'SOUTH STATUS', key: 'South', arrow: '🔽' },
-              { label: 'EAST STATUS', key: 'East', arrow: '▶️' },
-              { label: 'WEST STATUS', key: 'West', arrow: '◀️' },
-            ].map(({ label, key, arrow }) => {
-              const active = key === trafficData.active_lane;
-              return (
-                <div 
-                  key={key}
-                  className={`border-2 rounded-2xl p-4 flex flex-col items-center justify-center transition-all duration-300 ${
-                    active 
-                      ? 'border-amber-500/40 bg-amber-500/[0.02] shadow-[0_0_20px_rgba(249,115,22,0.04)]' 
-                      : 'border-white/[0.03] bg-white/[0.005]'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
-                    active 
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(249,115,22,0.2)]' 
-                      : 'bg-rose-500/5 border-rose-500/15 text-rose-400 shadow-[0_0_10px_rgba(255,59,59,0.05)]'
-                  }`}>
-                    {arrow}
-                  </div>
-                  <div className={`font-mono font-bold text-xl mt-3 ${active ? 'text-amber-400 text-glow' : 'text-slate-200'}`}>
-                    {vehicleCounts[key] || 0}
-                  </div>
-                  <div className="text-[9px] font-bold text-slate-400 tracking-wider mt-2">{label}</div>
-                </div>
-              );
-            })}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-bold text-slate-200 text-sm uppercase tracking-widest">
+              🚨 Live Violation Terminal
+            </h3>
+            <span className="text-[8px] font-mono font-semibold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
+              Live Feed
+            </span>
+          </div>
+          
+          <div className="flex-1 bg-black/60 rounded-xl p-4 border border-white/[0.03] font-mono text-xs overflow-y-auto space-y-2.5 max-h-[300px] scrollbar-thin">
+            {violationLogs.map((log) => (
+              <div key={log.id} className="flex items-start gap-2 text-slate-300">
+                <span className="text-slate-500 select-none">[{log.time}]</span>
+                <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                  log.type === 'speed' ? 'bg-amber-500/20 text-amber-400' :
+                  log.type === 'helmet' ? 'bg-indigo-500/20 text-indigo-400' :
+                  log.type === 'wrong' ? 'bg-purple-500/20 text-purple-400' :
+                  'bg-rose-500/20 text-rose-400'
+                }`}>
+                  {log.type}
+                </span>
+                <span className="flex-1">{log.msg}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 text-[10px] text-slate-500 flex justify-between items-center">
+            <span>Logged Events ({trafficData.violations || 0})</span>
+            <span>Auto-refreshing</span>
           </div>
         </motion.div>
       </motion.div>
