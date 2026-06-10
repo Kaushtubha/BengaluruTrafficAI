@@ -6,9 +6,9 @@ export default {
     extend: {
       colors: {
         brand: {
-          50:  '#fff0f3', 100: '#ffe0e8', 200: '#ffc6d5',
-          300: '#ff9ab5', 400: '#ff5c87', 500: '#e8184a',
-          600: '#cc0f3f', 700: '#a80933', 800: '#8a0a2c', 900: '#6e0a25',
+          50:  '#fff7ed', 100: '#ffedd5', 200: '#fed7aa',
+          300: '#fdba74', 400: '#fb923c', 500: '#f97316',
+          600: '#ea6800', 700: '#c2510a', 800: '#9a3412', 900: '#7c2d12',
         },
         dark: {
           50: '#f9fafb', 100: '#f3f4f6', 200: '#e5e7eb', 300: '#d1d5db',
@@ -27,7 +27,9 @@ export default {
         'premium-hover':'0 4px 12px rgba(0,0,0,0.08), 0 20px 40px rgba(0,0,0,0.12)',
         'glow':         '0 0 20px rgba(232,24,74,0.18)',
         'glow-brand':   '0 0 32px rgba(232,24,74,0.35), 0 4px 16px rgba(232,24,74,0.2)',
-        'glow-sm':      '0 0 12px rgba(232,24,74,0.12)',
+        'glow':         '0 0 20px rgba(249,115,22,0.18)',
+        'glow-brand':   '0 0 32px rgba(249,115,22,0.35), 0 4px 16px rgba(249,115,22,0.2)',
+        'glow-sm':      '0 0 12px rgba(249,115,22,0.12)',
         'glass':        '0 8px 32px rgba(0,0,0,0.08)',
         'glass-dark':   '0 8px 40px rgba(0,0,0,0.5)',
         'card-dark':    '0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 32px rgba(0,0,0,0.4)',
@@ -38,6 +40,7 @@ export default {
         'pulse-glow':   'pulse-glow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'float':        'float 6s ease-in-out infinite',
         'shimmer':      'shimmer 1.8s linear infinite',
+        'shine':        'shine 2s linear infinite',
         'slide-up':     'slideUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards',
         'fade-in':      'fadeIn 0.4s ease forwards',
         'count-up':     'countUp 0.6s cubic-bezier(0.22,1,0.36,1) forwards',
@@ -72,6 +75,14 @@ export default {
         borderSpin: {
           '0%':   { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(360deg)' },
+        },
+        shine: {
+          '0%':   { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+        countUp: {
+          '0%':   { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
       backgroundImage: {

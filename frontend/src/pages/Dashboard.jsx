@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import {
   Clock, TrendingUp, Sparkles, Layers, Activity,
   ArrowUpRight, AlertCircle, RefreshCw, Milestone,
-  Navigation, CarFront, ShieldAlert, Cpu
+  Navigation, CarFront, ShieldAlert, Cpu, Zap, MapPin
 } from 'lucide-react';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -202,6 +202,46 @@ export default function Dashboard() {
                 : 'bg-rose-400 shadow-[0_0_10px_#ff3b3b]'
             }`} />
             <span className="font-mono text-xs font-semibold tracking-wider">{systemStatus}</span>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── KPI Strip — Congestion + Junction info ──── */}
+      <motion.div
+        variants={rise}
+        className="glass-panel rounded-2xl px-6 py-4 border border-white/[0.05] flex flex-wrap gap-4 items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <MapPin size={14} className="text-amber-400 shrink-0" />
+          <div>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Junction</p>
+            <p className="text-sm font-semibold text-slate-200 font-mono">Silk Board, Bengaluru</p>
+          </div>
+        </div>
+        <div className="h-8 w-px bg-white/[0.05] hidden sm:block" />
+        <div className="flex items-center gap-3">
+          <Zap size={14} className={`shrink-0 ${ trafficData.congestion_level === 'High' ? 'text-red-400' : trafficData.congestion_level === 'Medium' ? 'text-amber-400' : 'text-emerald-400' }`} />
+          <div>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">RF Congestion Model</p>
+            <p className={`text-sm font-bold font-mono ${ trafficData.congestion_level === 'High' ? 'text-red-400' : trafficData.congestion_level === 'Medium' ? 'text-amber-400' : 'text-emerald-400' }`}>
+              {trafficData.congestion_level || 'Loading...'}
+            </p>
+          </div>
+        </div>
+        <div className="h-8 w-px bg-white/[0.05] hidden sm:block" />
+        <div className="flex items-center gap-3">
+          <Activity size={14} className="text-sky-400 shrink-0" />
+          <div>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Tracked All-Time</p>
+            <p className="text-sm font-bold font-mono text-sky-400">{trafficData.tracked_vehicles?.toLocaleString() || '0'} vehicles</p>
+          </div>
+        </div>
+        <div className="h-8 w-px bg-white/[0.05] hidden sm:block" />
+        <div className="flex items-center gap-3">
+          <Clock size={14} className="text-violet-400 shrink-0" />
+          <div>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Cycle Time</p>
+            <p className="text-sm font-bold font-mono text-violet-400">{signalData.cycle_time || 0}s</p>
           </div>
         </div>
       </motion.div>

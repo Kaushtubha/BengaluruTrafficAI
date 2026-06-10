@@ -204,6 +204,31 @@
   .nav-active-glow {
     box-shadow: 0 0 20px rgba(249,115,22,0.15);
   }
+
+  /* ─── Additional glow effects ─────────────── */
+  .text-glow-blue {
+    text-shadow: 0 0 14px rgba(56,189,248,0.5);
+  }
+  .dark .text-glow-blue {
+    text-shadow: 0 0 22px rgba(56,189,248,0.65);
+  }
+  .text-glow-red {
+    text-shadow: 0 0 14px rgba(239,68,68,0.5);
+  }
+  .dark .text-glow-red {
+    text-shadow: 0 0 22px rgba(239,68,68,0.65);
+  }
+
+  /* ─── Status badge ────────────────────────── */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold font-mono uppercase tracking-wider transition-all duration-300;
+  }
+
+  /* ─── Shine animation ─────────────────────── */
+  .animate-shine {
+    animation: shine 2s linear infinite;
+    background-size: 200% 100%;
+  }
 }
 
 /* ─── Scrollbar ──────────────────────────────── */
@@ -241,3 +266,14 @@ select option {
 
 .animate-float-orb-1 { animation: float-orb-1 15s ease-in-out infinite; }
 .animate-float-orb-2 { animation: float-orb-2 18s ease-in-out infinite reverse; }
+
+@keyframes shine {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Scrollbar thin ─────────────────────────── */
+.scrollbar-thin::-webkit-scrollbar { width: 3px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.3); border-radius: 2px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.6); }
