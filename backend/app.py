@@ -2,6 +2,7 @@ import sys
 import os
 import cv2
 import threading
+from datetime import datetime
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -17,7 +18,20 @@ from violation_detector import (
     check_red_light_violation,
     get_violation_count
 )
-
+from wrong_side_detector import (
+    check_wrong_side,
+    get_wrong_side_count
+)
+from speed_estimator import (
+    check_speed_violation,
+    get_speed_violation_count
+)
+from helmet_detector import (
+    check_helmet_violation,
+    get_helmet_violation_count
+)
+from db_logger import log_violation, log_traffic_stats
+from congestion_predictor import predict_congestion
 from tracker_manager import tracker
 from lane_manager import get_lane
 
@@ -39,6 +53,7 @@ traffic_state = {
     "status": "online",
     "junction": "Silk Board, Bengaluru",
     "active_lane": "North",
+    "congestion_level": "Low",
 
     "vehicle_counts": {
         "North": 0,
@@ -60,7 +75,6 @@ traffic_state = {
 
 
 def run_detection():
-
     video_path = os.path.join(
         BASE_DIR,
         "ai",
@@ -74,8 +88,9 @@ def run_detection():
         print("Video could not be opened")
         return
 
-    while True:
+    frame_counter = 0
 
+    while True:
         ret, frame = cap.read()
 
         if not ret:
@@ -83,9 +98,7 @@ def run_detection():
             continue
 
         results = model(frame, verbose=False)[0]
-
         detections = []
-
         frame_height, frame_width = frame.shape[:2]
 
         lane_counts = {
@@ -95,13 +108,13 @@ def run_detection():
             "West": 0
         }
 
-        for box in results.boxes:
+        emergency_lanes = []
 
+        for box in results.boxes:
             cls_id = int(box.cls[0])
             conf = float(box.conf[0])
 
             if cls_id in VEHICLE_CLASSES and conf > 0.4:
-
                 x1, y1, x2, y2 = map(
                     int,
                     box.xyxy[0]
@@ -121,50 +134,101 @@ def run_detection():
         )
 
         for track in tracks:
-
             if not track.is_confirmed():
                 continue
 
             track_id = track.track_id
-
             tracked_vehicle_ids.add(track_id)
 
             ltrb = track.to_ltrb()
-
             x1, y1, x2, y2 = map(int, ltrb)
 
             center_x = (x1 + x2) // 2
+            center_y = (y1 + y2) // 2
 
             lane = get_lane(center_x, frame_width)
-
             lane_counts[lane] += 1
 
-            check_red_light_violation(
+            # 1. Red Light jumps
+            is_red_violation, red_v = check_red_light_violation(
                 (x1, y1, x2, y2),
                 signal_state="RED",
                 track_id=track_id
             )
+            if is_red_violation:
+                log_violation(red_v)
 
+            # 2. Wrong side driving checks
+            is_wrong, ws_v = check_wrong_side(
+                track_id, 
+                center_x, 
+                center_y, 
+                frame_width, 
+                frame_height
+            )
+            if is_wrong:
+                log_violation(ws_v)
+
+            # 3. Speed violations checks
+            is_speeding, speed_v, speed = check_speed_violation(
+                track_id, 
+                center_x, 
+                center_y
+            )
+            if is_speeding:
+                log_violation(speed_v)
+
+            # 4. Helmet violation checks on motorcycles
+            is_helmet_violation, helmet_v = check_helmet_violation(
+                (x1, y1, x2, y2),
+                track.label,
+                track_id=track_id
+            )
+            if is_helmet_violation:
+                log_violation(helmet_v)
+
+            # 5. Emergency priority trigger simulation (e.g. tracks % 22 == 0 represent Ambulances)
+            if track_id > 0 and track_id % 22 == 0:
+                if lane not in emergency_lanes:
+                    emergency_lanes.append(lane)
+
+        # Update stats
         traffic_state["vehicle_counts"] = lane_counts
+        traffic_state["total_vehicles"] = sum(lane_counts.values())
+        traffic_state["tracked_vehicles"] = len(tracked_vehicle_ids)
+        
+        # Calculate active lane
+        active_lane = max(lane_counts, key=lane_counts.get)
+        traffic_state["active_lane"] = active_lane
+        active_lane_count = lane_counts[active_lane]
 
-        traffic_state["total_vehicles"] = sum(
-            lane_counts.values()
+        # 6. Predict Congestion with Random Forest Classifier
+        hour = datetime.now().hour
+        congestion_level = predict_congestion(
+            hour, 
+            traffic_state["total_vehicles"], 
+            active_lane_count
         )
+        traffic_state["congestion_level"] = congestion_level
 
-        traffic_state["tracked_vehicles"] = len(
-            tracked_vehicle_ids
-        )
-
-        traffic_state["active_lane"] = max(
-            lane_counts,
-            key=lane_counts.get
-        )
-
+        # 7. Calculate Adaptive Signal Plan with Emergency priorities overrides
         traffic_state["signal_plan"] = get_signal_plan(
-            lane_counts
+            lane_counts,
+            emergency_lanes=emergency_lanes
         )
 
-        traffic_state["violations"] = get_violation_count()
+        # Calculate combined violations
+        traffic_state["violations"] = (
+            get_violation_count() + 
+            get_speed_violation_count() + 
+            get_wrong_side_count() + 
+            get_helmet_violation_count()
+        )
+
+        # 8. MongoDB log traffic stats every 60 frames (~2s)
+        frame_counter += 1
+        if frame_counter % 60 == 0:
+            log_traffic_stats(lane_counts, congestion_level)
 
     cap.release()
 
@@ -197,13 +261,15 @@ def get_signal():
 @app.route('/api/violations', methods=['GET'])
 def get_violations():
     return jsonify({
-        "total_violations":
-        traffic_state["violations"]
+        "total_violations": traffic_state["violations"],
+        "red_light": get_violation_count(),
+        "wrong_side": get_wrong_side_count(),
+        "speeding": get_speed_violation_count(),
+        "no_helmet": get_helmet_violation_count()
     })
 
 
 if __name__ == '__main__':
-
     app.run(
         port=5000,
         debug=True,

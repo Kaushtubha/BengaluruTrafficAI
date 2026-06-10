@@ -31,10 +31,18 @@ def get_priority_lane(vehicle_counts: dict) -> str:
     """Sabse zyada vehicles wali lane ko priority do"""
     return max(vehicle_counts, key=vehicle_counts.get)
 
-def get_signal_plan(vehicle_counts: dict) -> dict:
-    """Complete signal plan banao"""
+def get_signal_plan(vehicle_counts: dict, emergency_lanes: list = None) -> dict:
+    """Complete signal plan banao, priority to emergency vehicles"""
     green_times = calculate_green_time(vehicle_counts)
     priority = get_priority_lane(vehicle_counts)
+
+    if emergency_lanes:
+        # Emergency lane gets priority override
+        priority = emergency_lanes[0]
+        # Give priority lane max green time (60 seconds)
+        green_times[priority] = MAX_GREEN
+        # Log override
+        print(f"🚨 EMERGENCY VEHICLE detected in {priority} lane! Signal plan overriden.")
 
     return {
         "green_times": green_times,
