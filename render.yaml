@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: bengaluru-traffic-ai-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python backend/app.py
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: DB_NAME
+        value: bengaluru_traffic
