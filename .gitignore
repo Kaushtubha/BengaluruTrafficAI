@@ -1,5 +1,52 @@
+# Python
 .venv/
+venv/
+env/
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# AI model weights
+*.pt
+*.pth
+*.onnx
+*.weights
+
+# Snapshots / uploads
 ai/snapshots/
+
+# Node / Frontend
+node_modules/
+.next/
+dist/
+frontend/dist/
+frontend/.next/
+
+# IDE & Editor
+.vscode/settings.json
+.idea/
+*.sublime-workspace
+*.swp
+*~
+
+# OS
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
