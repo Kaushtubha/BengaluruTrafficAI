@@ -2,9 +2,10 @@ import sys
 import os
 import cv2
 import threading
+import math
 from datetime import datetime
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from ultralytics import YOLO
 
@@ -288,6 +289,151 @@ def simulate_emergency():
     else:
         simulated_emergency_lane = None
         return jsonify({"status": "success", "message": "Simulated emergency overrides cleared."})
+
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok", "mode": "live_cv"})
+
+
+def _calculate_haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0  # Earth radius in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
+         math.sin(dlon / 2) ** 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return round(R * c, 2)
+
+
+@app.route('/api/driver_advice', methods=['GET'])
+def get_driver_advice():
+    # 1. Configurable Junction Identity & Coordinate Validation
+    junction_name = os.environ.get("JUNCTION_NAME", traffic_state.get("junction", "Silk Board, Bengaluru"))
+    junction_lat_env = os.environ.get("JUNCTION_LAT")
+    junction_lon_env = os.environ.get("JUNCTION_LON")
+
+    junction_config_error = None
+    if junction_lat_env is not None or junction_lon_env is not None:
+        try:
+            j_lat = float(junction_lat_env)
+            j_lon = float(junction_lon_env)
+            if not (-90.0 <= j_lat <= 90.0 and -180.0 <= j_lon <= 180.0):
+                junction_config_error = f"Configured junction coordinates out of range (-90..90, -180..180): lat={j_lat}, lon={j_lon}"
+                junction_lat, junction_lon = None, None
+            else:
+                junction_lat, junction_lon = j_lat, j_lon
+        except (ValueError, TypeError):
+            junction_config_error = "Configured junction coordinates have invalid numeric format"
+            junction_lat, junction_lon = None, None
+    else:
+        junction_lat, junction_lon = 12.9176, 77.6238
+
+    # 2. Strict Corridor Validation (North, South, East, West case-insensitive)
+    raw_corridor = request.args.get('corridor')
+    valid_corridors = ["North", "South", "East", "West"]
+
+    if raw_corridor is not None and raw_corridor.strip() != "":
+        clean_corridor = raw_corridor.strip()
+        matched = [c for c in valid_corridors if c.lower() == clean_corridor.lower()]
+        if not matched:
+            return jsonify({
+                "status": "error",
+                "message": f"Invalid corridor '{clean_corridor}'. Must be one of: {', '.join(valid_corridors)}."
+            }), 400
+        corridor = matched[0]
+    else:
+        active = traffic_state.get("active_lane")
+        corridor = active if active in valid_corridors else "North"
+
+    # 3. GPS Coordinates Validation & Distance
+    lat_param = request.args.get('lat')
+    lon_param = request.args.get('lon')
+    distance_km = None
+
+    if lat_param is not None and lon_param is None:
+        distance_status = "INCOMPLETE_COORDINATES_MISSING_LON"
+    elif lat_param is None and lon_param is not None:
+        distance_status = "INCOMPLETE_COORDINATES_MISSING_LAT"
+    elif lat_param is not None and lon_param is not None:
+        try:
+            driver_lat = float(lat_param)
+            driver_lon = float(lon_param)
+            if not (-90.0 <= driver_lat <= 90.0 and -180.0 <= driver_lon <= 180.0):
+                distance_status = "COORDINATES_OUT_OF_RANGE"
+            elif junction_lat is None or junction_lon is None:
+                distance_status = "JUNCTION_COORDINATES_CONFIG_ERROR"
+            else:
+                distance_km = _calculate_haversine(driver_lat, driver_lon, junction_lat, junction_lon)
+                distance_status = "CALCULATED"
+        except (ValueError, TypeError):
+            distance_status = "INVALID_COORDINATE_FORMAT"
+    else:
+        distance_status = "COORDINATES_NOT_PROVIDED"
+
+    # 4. Check Genuine Metric Availability (No silent zero substitution)
+    vehicle_counts = traffic_state.get("vehicle_counts")
+    corridor_count = vehicle_counts.get(corridor) if isinstance(vehicle_counts, dict) and corridor in vehicle_counts else None
+
+    total_vehicles = traffic_state.get("total_vehicles")
+    if not isinstance(total_vehicles, (int, float)):
+        total_vehicles = None
+
+    signal_plan = traffic_state.get("signal_plan")
+    if isinstance(signal_plan, dict):
+        green_times = signal_plan.get("green_times")
+        corridor_green = green_times.get(corridor) if isinstance(green_times, dict) and corridor in green_times else None
+        cycle_time = signal_plan.get("cycle_time")
+        if not isinstance(cycle_time, (int, float)):
+            cycle_time = None
+    else:
+        corridor_green = None
+        cycle_time = None
+
+    congestion_level = traffic_state.get("congestion_level")
+    if congestion_level not in ["Low", "Medium", "High"]:
+        congestion_level = "UNAVAILABLE"
+
+    return jsonify({
+        "status": "success",
+        "data_source": "live_cv",
+        "feed_description": "Local Computer Vision Inference (Sample Video — Generic Urban Roadway)",
+        "junction": {
+            "name": junction_name,
+            "latitude": junction_lat,
+            "longitude": junction_lon,
+            "is_configurable": True,
+            "configuration_error": junction_config_error
+        },
+        "approach": {
+            "corridor": corridor,
+            "visible_vehicle_count": corridor_count,
+            "total_junction_vehicles": total_vehicles,
+            "assigned_green_time_sec": corridor_green,
+            "cycle_time_sec": cycle_time,
+            "congestion_level": congestion_level
+        },
+        "distance_telemetry": {
+            "calculation_method": "Haversine Geodesic (Straight-Line)",
+            "straight_line_distance_km": distance_km,
+            "status": distance_status,
+            "disclaimer": "Straight-line aerial distance only. Actual road driving distance will be longer due to road topology and flyover ramps."
+        },
+        "delay_telemetry": {
+            "delay_status": "ESTIMATE_UNAVAILABLE",
+            "estimated_delay_mins": None,
+            "reason": "Queue clearance delay cannot be accurately calculated without upstream queue length and continuous arrival rates outside camera FOV."
+        },
+        "safety_guidelines": [
+            f"Approaching {corridor} corridor. Maintain safe braking distance in stop-and-go queue.",
+            "Merge early and avoid sudden lane switching near junction approach ramps."
+        ],
+        "corridor_status": {
+            "monitored_corridors": valid_corridors,
+            "unmonitored_routes": "DATA_UNAVAILABLE"
+        }
+    })
 
 
 if __name__ == '__main__':

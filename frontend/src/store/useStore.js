@@ -100,6 +100,38 @@ export const useStore = create((set, get) => ({
     }
   },
 
+  // Driver Assistance State
+  driverAdvice: null,
+  driverLoading: false,
+  driverError: null,
+  selectedCorridor: 'North',
+  userCoords: null,
+  setSelectedCorridor: (corridor) => set({ selectedCorridor: corridor }),
+  setUserCoords: (coords) => set({ userCoords: coords }),
+
+  // Fetch personalized commuter advice for approach corridor & optional GPS
+  fetchDriverAdvice: async (corridor, lat, lon) => {
+    const activeCorridor = corridor || get().selectedCorridor || 'North';
+    const coords = (lat !== undefined && lon !== undefined)
+      ? (lat != null && lon != null ? { lat, lon } : null)
+      : get().userCoords;
+
+    set({ driverLoading: true, driverError: null });
+    try {
+      const params = { corridor: activeCorridor };
+      if (coords && coords.lat != null && coords.lon != null) {
+        params.lat = coords.lat;
+        params.lon = coords.lon;
+      }
+      const res = await api.get('/driver_advice', { params });
+      set({ driverAdvice: res.data, driverLoading: false, driverError: null });
+    } catch (err) {
+      console.error('Failed to fetch driver advice:', err);
+      const errMsg = err.response?.data?.message || err.message || 'Failed to fetch driver advice';
+      set({ driverError: errMsg, driverLoading: false });
+    }
+  },
+
   // Trigger simulated emergency vehicle in the backend
   simulateEmergency: async (lane) => {
     try {

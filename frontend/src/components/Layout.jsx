@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
   LayoutDashboard, Sun, Moon, Menu, X, Radar, ChevronRight, BarChart2,
+  Navigation,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ParticleBackground from './ParticleBackground';
@@ -10,6 +11,7 @@ import ParticleBackground from './ParticleBackground';
 const NAV = [
   { name: 'Junction Dashboard', path: '/', icon: LayoutDashboard, sub: 'Junction flow & timings' },
   { name: 'Analytics', path: '/analytics', icon: BarChart2, sub: 'Violations & trends' },
+  { name: 'Driver Portal', path: '/driver', icon: Navigation, sub: 'Corridor & approach advice' },
 ];
 
 export default function Layout({ children }) {

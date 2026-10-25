@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
+import DriverPortal from './pages/DriverPortal';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/driver" element={<DriverPortal />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </Layout>
