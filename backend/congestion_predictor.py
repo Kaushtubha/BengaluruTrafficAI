@@ -27,7 +27,10 @@ y_train = np.array(y_train)
 # Fit Random Forest Classifier
 model = RandomForestClassifier(n_estimators=10, random_state=42)
 model.fit(X_train, y_train)
-print("🌲 Random Forest Traffic Congestion Predictor Model trained and ready.")
+try:
+    print("🌲 Random Forest Traffic Congestion Predictor Model trained and ready.")
+except UnicodeEncodeError:
+    print("[ML] Random Forest Traffic Congestion Predictor Model trained and ready.")
 
 def predict_congestion(hour, total_vehicles, active_lane_count):
     """

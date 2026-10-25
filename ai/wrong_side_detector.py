@@ -43,17 +43,22 @@ def check_wrong_side(track_id, cx, cy, frame_w=FRAME_W, frame_h=FRAME_H):
         is_wrong = True
 
     if is_wrong:
+        # Avoid duplicate violations for same vehicle
+        existing_ids = [v["track_id"] for v in wrong_side_violations]
+        if track_id in existing_ids:
+            return False, None
+
         violation = {
             "type": "Wrong Side Driving",
             "track_id": track_id,
             "position": (cx, cy),
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
-        # Avoid duplicate violations for same vehicle
-        existing_ids = [v["track_id"] for v in wrong_side_violations]
-        if track_id not in existing_ids:
-            wrong_side_violations.append(violation)
+        wrong_side_violations.append(violation)
+        try:
             print(f"⚠️ Wrong Side! Vehicle #{track_id} at {violation['timestamp']}")
+        except UnicodeEncodeError:
+            print(f"[VIOLATION] Wrong Side: Vehicle #{track_id} at {violation['timestamp']}")
         return True, violation
 
     return False, None

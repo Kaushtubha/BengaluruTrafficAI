@@ -64,12 +64,15 @@ def get_signal_plan(vehicle_counts: dict, emergency_lanes: list = None) -> dict:
         # Emergency lane gets priority override
         priority = emergency_lanes[0]
         green_times[priority] = MAX_GREEN
-        print(f"🚨 EMERGENCY VEHICLE detected in {priority} lane! Signal plan overridden.")
+        try:
+            print(f"🚨 EMERGENCY VEHICLE detected in {priority} lane! Signal plan overridden.")
+        except UnicodeEncodeError:
+            print(f"[EMERGENCY] Vehicle detected in {priority} lane! Signal plan overridden.")
 
     return {
         "green_times": green_times,
         "priority_lane": priority,
-        "cycle_time": sum(green_times.values()),
+        "cycle_time": round(sum(green_times.values()), 1),
     }
 
 

@@ -15,6 +15,11 @@ def check_red_light_violation(box, signal_state="RED", track_id=None):
     vehicle_bottom = y2
 
     if signal_state == "RED" and vehicle_bottom > STOP_LINE_Y:
+        # Avoid duplicate logging for the same tracked vehicle across frames
+        recent_ids = [v["track_id"] for v in violations[-20:] if v.get("track_id") is not None]
+        if track_id is not None and track_id in recent_ids:
+            return False, None
+
         violation = {
             "type": "Red Light Jump",
             "track_id": track_id,
@@ -23,7 +28,10 @@ def check_red_light_violation(box, signal_state="RED", track_id=None):
             "line_y": STOP_LINE_Y
         }
         violations.append(violation)
-        print(f"🚨 Red Light Violation! Track ID: {track_id} at {violation['timestamp']}")
+        try:
+            print(f"🚨 Red Light Violation! Track ID: {track_id} at {violation['timestamp']}")
+        except UnicodeEncodeError:
+            print(f"[VIOLATION] Red Light Jump: Track ID {track_id} at {violation['timestamp']}")
         return True, violation
     return False, None
 
