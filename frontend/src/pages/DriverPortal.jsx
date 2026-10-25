@@ -41,6 +41,7 @@ export default function DriverPortal() {
 
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [gpsDetecting, setGpsDetecting] = useState(false);
+  const [gpsError, setGpsError] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
   const handleFetch = useCallback(() => {
@@ -65,10 +66,12 @@ export default function DriverPortal() {
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser');
+      setGpsError('UNSUPPORTED');
       return;
     }
 
     setGpsDetecting(true);
+    setGpsError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = {
@@ -77,15 +80,23 @@ export default function DriverPortal() {
         };
         setUserCoords(coords);
         setGpsDetecting(false);
+        setGpsError(null);
         toast.success(`Location set: ${coords.lat}, ${coords.lon}`);
       },
       (err) => {
         setGpsDetecting(false);
         console.warn('Geolocation error:', err);
         let msg = 'Unable to retrieve location';
-        if (err.code === 1) msg = 'Location access denied. You may choose an approximate landmark preset.';
-        else if (err.code === 2) msg = 'Location unavailable. Try an approximate landmark preset.';
-        else if (err.code === 3) msg = 'Location request timed out.';
+        if (err.code === 1) {
+          msg = 'Location access denied. You may choose an approximate landmark preset.';
+          setGpsError('PERMISSION_DENIED');
+        } else if (err.code === 2) {
+          msg = 'Location unavailable. Try an approximate landmark preset.';
+          setGpsError('POSITION_UNAVAILABLE');
+        } else if (err.code === 3) {
+          msg = 'Location request timed out.';
+          setGpsError('TIMEOUT');
+        }
         toast.error(msg);
       },
       { timeout: 8000, enableHighAccuracy: true }
@@ -94,6 +105,7 @@ export default function DriverPortal() {
 
   const handleClearLocation = () => {
     setUserCoords(null);
+    setGpsError(null);
     fetchDriverAdvice(selectedCorridor, null, null);
     toast('GPS coordinates cleared', { icon: '📍' });
   };
@@ -172,6 +184,37 @@ export default function DriverPortal() {
           </button>
         </div>
       </motion.div>
+
+      {/* ── Backend Telemetry Error / Idle Sleep Alert ──────────── */}
+      {driverError && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          role="alert"
+          aria-live="polite"
+          className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={20} className="text-amber-500 shrink-0" />
+            <div className="text-xs">
+              <span className="font-bold text-amber-400 uppercase tracking-wide block">
+                Backend Telemetry Offline or Waking Up
+              </span>
+              <span className="text-amber-100/80">
+                {driverError}. Render free-tier instances may require 30–50 seconds to wake from idle spin-down.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={handleFetch}
+            disabled={driverLoading}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white shrink-0 self-start sm:self-auto flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50 touch-manipulation"
+          >
+            <RefreshCw size={13} className={driverLoading ? 'animate-spin' : ''} />
+            Retry Connection
+          </button>
+        </motion.div>
+      )}
 
       {/* ── Data Provenance & Junction Disclosure ───────────────── */}
       <motion.div variants={rise} className="glass-card p-4 sm:p-5 rounded-2xl border border-white/60 dark:border-white/[0.08] relative overflow-hidden">
@@ -401,10 +444,14 @@ export default function DriverPortal() {
               </p>
             </div>
           ) : (
-            <div className="text-xs text-slate-500 dark:text-dark-400 flex items-center gap-2">
-              <Info size={15} className="text-slate-400 shrink-0" />
+            <div className="text-xs text-slate-500 dark:text-dark-400 flex items-start gap-2">
+              <Info size={15} className="text-slate-400 shrink-0 mt-0.5" />
               <span>
-                {distanceTelemetry.status === 'INCOMPLETE_COORDINATES_MISSING_LAT' || distanceTelemetry.status === 'INCOMPLETE_COORDINATES_MISSING_LON'
+                {gpsError === 'PERMISSION_DENIED'
+                  ? 'Location permission was denied in your browser. You can still select any of the landmark presets above to view straight-line proximity.'
+                  : gpsError === 'TIMEOUT'
+                  ? 'Location request timed out. Please retry or click an approximate landmark preset above.'
+                  : distanceTelemetry.status === 'INCOMPLETE_COORDINATES_MISSING_LAT' || distanceTelemetry.status === 'INCOMPLETE_COORDINATES_MISSING_LON'
                   ? 'Incomplete GPS coordinates provided. Please detect location or select an approximate landmark preset.'
                   : distanceTelemetry.status === 'COORDINATES_OUT_OF_RANGE'
                   ? 'Supplied coordinates were outside valid geographic ranges (-90 to 90 lat, -180 to 180 lon).'
