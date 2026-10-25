@@ -66,6 +66,7 @@
 | 🧠 **ML Forecasting** | scikit-learn Random Forest congestion predictor — Low / Medium / High |
 | 🚑 **Emergency Override** | Auto-detection + manual frontend trigger for ambulances / fire trucks |
 | 💾 **Database Logging** | MongoDB integration with graceful offline console fallback |
+| 🧭 **Driver Advice** | Real-time corridor telemetry · straight-line proximity · signal guidance (`/driver`) |
 | 📊 **Live Dashboard** | React 18 + Vite + Tailwind + Recharts + Framer Motion |
 | 🌐 **Fully Deployed** | Frontend on Vercel · Backend API on Render · Both free-tier |
 
@@ -128,7 +129,8 @@ BengaluruTrafficAI/
 │   │   │   └── ParticleBackground.jsx # Animated ambient particle canvas
 │   │   ├── 📁 pages/
 │   │   │   ├── Dashboard.jsx          # Junction radar, live stats & AI terminal
-│   │   │   └── Analytics.jsx          # Historical charts & violation breakdown
+│   │   │   ├── Analytics.jsx          # Historical charts & violation breakdown
+│   │   │   └── DriverPortal.jsx       # Commuter guidance, corridor metrics & GPS telemetry
 │   │   ├── 📁 store/
 │   │   │   └── useStore.js            # Zustand global state + API polling logic
 │   │   ├── App.jsx                    # Root component with router
@@ -137,11 +139,14 @@ BengaluruTrafficAI/
 │   ├── package.json
 │   └── index.html
 │
+├── 📁 tests/                          # Automated Regression Test Suite (unittest)
+│   ├── __init__.py
+│   └── test_driver_advice.py          # Dual-backend endpoint & validation test suite
+│
 ├── render.yaml                        # Render deployment config
 ├── requirements.txt                   # Full Python dependencies (local AI)
 ├── requirements-demo.txt              # Minimal deps for Render free-tier
-├── yolov8n.pt                         # YOLOv8 nano pre-trained weights (6.5 MB)
-└── .env                               # Environment variables (MongoDB URI etc.)
+└── .env.example                       # Environment template (coordinates, Mongo, etc.)
 ```
 
 ---
@@ -263,8 +268,69 @@ Trigger priority signal override.
 { "status": "success", "message": "Emergency vehicle simulated in North lane." }
 ```
 
+### `GET /api/driver_advice`
+Commuter guidance and corridor metrics for drivers approaching the junction.
+
+**Query Parameters:**
+- `corridor` *(optional, string)*: Approach direction (`North`, `South`, `East`, `West`). Case-insensitive; defaults to `North`. Invalid non-empty value returns HTTP 400.
+- `lat` *(optional, float)*: Commuter GPS latitude (-90.0 to 90.0).
+- `lon` *(optional, float)*: Commuter GPS longitude (-180.0 to 180.0).
+
+**Response (HTTP 200):**
+```json
+{
+  "status": "success",
+  "data_provenance": "live_cv",
+  "corridor": "North",
+  "junction": {
+    "name": "Silk Board, Bengaluru",
+    "latitude": 12.9172,
+    "longitude": 77.6229,
+    "configured_status": "CONFIGURED_NOMINAL"
+  },
+  "approach_metrics": {
+    "queue_count": 12,
+    "relative_share_pct": 27.9,
+    "density_band": "MODERATE"
+  },
+  "signal_guidance": {
+    "state": "RED",
+    "green_duration_seconds": 28.3,
+    "cycle_time_seconds": 100.0,
+    "priority_corridor": "South"
+  },
+  "speed_profile": {
+    "average_speed_kmh": 22.4,
+    "sample_size": 12,
+    "speed_band": "SLOW"
+  },
+  "distance_telemetry": {
+    "commuter_coordinates": { "latitude": 12.9352, "longitude": 77.6245 },
+    "straight_line_distance_km": 2.01,
+    "status": "TELEMETRY_AVAILABLE"
+  },
+  "delay_estimation": {
+    "status": "ESTIMATE_UNAVAILABLE",
+    "reason": "Queue tail extends beyond camera FOV"
+  },
+  "alternate_routes": {
+    "status": "DATA_UNAVAILABLE",
+    "recommendation": "Maintain corridor or use city navigation"
+  },
+  "timestamp": 1740000000.0
+}
+```
+
 ### `GET /api/health`
-Backend health check.
+Backend service health and process uptime.
+
+```json
+{
+  "status": "ok",
+  "uptime_seconds": 3600,
+  "mode": "demo"
+}
+```
 
 ---
 
@@ -341,8 +407,22 @@ cd frontend && npm run dev
 MONGO_URI=mongodb://localhost:27017/
 DB_NAME=bengaluru_traffic
 
+# Junction reference coordinates (optional, defaults to Silk Board)
+JUNCTION_NAME="Silk Board, Bengaluru"
+JUNCTION_LAT=12.9172
+JUNCTION_LON=77.6229
+
 # frontend/.env.local (for connecting to remote backend)
 VITE_API_URL=https://bengalurutrafficai.onrender.com
+```
+
+### 🧪 Step 3 — Running Automated Tests
+
+Run the regression test suite across both live and demo backends using Python's standard `unittest` library (no external test runners required):
+
+```bash
+# Run all tests
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 ---
@@ -398,12 +478,24 @@ VITE_API_URL=https://bengalurutrafficai.onrender.com
 - [x] Cyberpunk glassmorphic React dashboard (dark + light mode)
 - [x] Real-time junction SVG radar visualizer with animated traffic dots
 - [x] Live vehicle count streaming chart (Recharts AreaChart)
+- [x] Driver Assistance Portal with corridor guidance & straight-line proximity (`/driver`)
 - [x] **Deployed live — Frontend (Vercel) + Backend (Render)**
 - [ ] ALPR — Automatic License Plate Recognition integration
 - [ ] Live CCTV RTSP stream support (replace sample video)
 - [ ] Multi-junction coordination network
 - [ ] Historical trend analytics with time-series database
 - [ ] Mobile operator app (React Native)
+
+---
+
+## ⚠️ System Limitations & Telemetry Integrity
+
+In accordance with strict telemetry honesty principles:
+
+1. **Straight-Line vs. Road Distance**: Commuter proximity reported by `/api/driver_advice` is calculated using the spherical Haversine formula (Euclidean straight-line distance). It does **not** represent road network driving distance, turn-by-turn routing, or road congestion delays.
+2. **FOV-Bounded Queue Estimates**: Field-of-view cameras cannot observe traffic queues beyond their optical coverage. Therefore, corridor delay is reported as `ESTIMATE_UNAVAILABLE` rather than extrapolating speculative queue delays.
+3. **Alternate Route Availability**: The platform monitors the local junction and does not fabricate detour directions; alternate route suggestions are marked `DATA_UNAVAILABLE`.
+4. **Data Provenance Transparency**: Every response explicitly identifies its origin mode via `data_provenance` (`live_cv` for the local YOLOv8 inference pipeline or `demo_sim` for the cloud demonstration mock loop). Simulated observations are never represented as real sensor data.
 
 ---
 
