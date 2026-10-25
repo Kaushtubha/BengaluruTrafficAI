@@ -280,44 +280,42 @@ Commuter guidance and corridor metrics for drivers approaching the junction.
 ```json
 {
   "status": "success",
-  "data_provenance": "live_cv",
-  "corridor": "North",
+  "data_source": "live_cv",
+  "feed_description": "Local Computer Vision Inference (Sample Video — Generic Urban Roadway)",
   "junction": {
     "name": "Silk Board, Bengaluru",
-    "latitude": 12.9172,
-    "longitude": 77.6229,
-    "configured_status": "CONFIGURED_NOMINAL"
+    "latitude": 12.9176,
+    "longitude": 77.6238,
+    "is_configurable": true,
+    "configuration_error": null
   },
-  "approach_metrics": {
-    "queue_count": 12,
-    "relative_share_pct": 27.9,
-    "density_band": "MODERATE"
-  },
-  "signal_guidance": {
-    "state": "RED",
-    "green_duration_seconds": 28.3,
-    "cycle_time_seconds": 100.0,
-    "priority_corridor": "South"
-  },
-  "speed_profile": {
-    "average_speed_kmh": 22.4,
-    "sample_size": 12,
-    "speed_band": "SLOW"
+  "approach": {
+    "corridor": "North",
+    "visible_vehicle_count": 12,
+    "total_junction_vehicles": 43,
+    "assigned_green_time_sec": 28.3,
+    "cycle_time_sec": 100.0,
+    "congestion_level": "Medium"
   },
   "distance_telemetry": {
-    "commuter_coordinates": { "latitude": 12.9352, "longitude": 77.6245 },
+    "calculation_method": "Haversine Geodesic (Straight-Line)",
     "straight_line_distance_km": 2.01,
-    "status": "TELEMETRY_AVAILABLE"
+    "status": "CALCULATED",
+    "disclaimer": "Straight-line aerial distance only. Actual road driving distance will be longer due to road topology and flyover ramps."
   },
-  "delay_estimation": {
-    "status": "ESTIMATE_UNAVAILABLE",
-    "reason": "Queue tail extends beyond camera FOV"
+  "delay_telemetry": {
+    "delay_status": "ESTIMATE_UNAVAILABLE",
+    "estimated_delay_mins": null,
+    "reason": "Queue clearance delay cannot be accurately calculated without upstream queue length and continuous arrival rates outside camera FOV."
   },
-  "alternate_routes": {
-    "status": "DATA_UNAVAILABLE",
-    "recommendation": "Maintain corridor or use city navigation"
-  },
-  "timestamp": 1740000000.0
+  "safety_guidelines": [
+    "Approaching North corridor. Maintain safe braking distance in stop-and-go queue.",
+    "Merge early and avoid sudden lane switching near junction approach ramps."
+  ],
+  "corridor_status": {
+    "monitored_corridors": ["North", "South", "East", "West"],
+    "unmonitored_routes": "DATA_UNAVAILABLE"
+  }
 }
 ```
 
