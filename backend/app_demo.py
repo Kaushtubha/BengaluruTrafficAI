@@ -170,13 +170,22 @@ def get_driver_advice():
     junction_config_error = None
     if junction_lat_env is not None or junction_lon_env is not None:
         try:
-            j_lat = float(junction_lat_env)
-            j_lon = float(junction_lon_env)
-            if not (-90.0 <= j_lat <= 90.0 and -180.0 <= j_lon <= 180.0):
-                junction_config_error = f"Configured junction coordinates out of range (-90..90, -180..180): lat={j_lat}, lon={j_lon}"
+            j_lat_str = str(junction_lat_env).strip()
+            j_lon_str = str(junction_lon_env).strip()
+            if len(j_lat_str) > 32 or len(j_lon_str) > 32:
+                junction_config_error = "Configured junction coordinates exceed maximum allowed length of 32 characters"
                 junction_lat, junction_lon = None, None
             else:
-                junction_lat, junction_lon = j_lat, j_lon
+                j_lat = float(j_lat_str)
+                j_lon = float(j_lon_str)
+                if math.isnan(j_lat) or math.isnan(j_lon) or math.isinf(j_lat) or math.isinf(j_lon):
+                    junction_config_error = "Configured junction coordinates have invalid numeric format"
+                    junction_lat, junction_lon = None, None
+                elif not (-90.0 <= j_lat <= 90.0 and -180.0 <= j_lon <= 180.0):
+                    junction_config_error = f"Configured junction coordinates out of range (-90..90, -180..180): lat={j_lat}, lon={j_lon}"
+                    junction_lat, junction_lon = None, None
+                else:
+                    junction_lat, junction_lon = j_lat, j_lon
         except (ValueError, TypeError):
             junction_config_error = "Configured junction coordinates have invalid numeric format"
             junction_lat, junction_lon = None, None
@@ -193,6 +202,11 @@ def get_driver_advice():
 
     if raw_corridor is not None and raw_corridor.strip() != "":
         clean_corridor = raw_corridor.strip()
+        if len(clean_corridor) > 32:
+            return jsonify({
+                "status": "error",
+                "message": "Corridor parameter exceeds maximum allowed length of 32 characters."
+            }), 400
         matched = [c for c in LANES if c.lower() == clean_corridor.lower()]
         if not matched:
             return jsonify({
@@ -213,18 +227,25 @@ def get_driver_advice():
     elif lat_param is None and lon_param is not None:
         distance_status = "INCOMPLETE_COORDINATES_MISSING_LAT"
     elif lat_param is not None and lon_param is not None:
-        try:
-            driver_lat = float(lat_param)
-            driver_lon = float(lon_param)
-            if not (-90.0 <= driver_lat <= 90.0 and -180.0 <= driver_lon <= 180.0):
-                distance_status = "COORDINATES_OUT_OF_RANGE"
-            elif junction_lat is None or junction_lon is None:
-                distance_status = "JUNCTION_COORDINATES_CONFIG_ERROR"
-            else:
-                distance_km = _calculate_haversine(driver_lat, driver_lon, junction_lat, junction_lon)
-                distance_status = "CALCULATED"
-        except (ValueError, TypeError):
+        lat_str = str(lat_param).strip()
+        lon_str = str(lon_param).strip()
+        if len(lat_str) > 32 or len(lon_str) > 32:
             distance_status = "INVALID_COORDINATE_FORMAT"
+        else:
+            try:
+                driver_lat = float(lat_str)
+                driver_lon = float(lon_str)
+                if math.isnan(driver_lat) or math.isnan(driver_lon) or math.isinf(driver_lat) or math.isinf(driver_lon):
+                    distance_status = "INVALID_COORDINATE_FORMAT"
+                elif not (-90.0 <= driver_lat <= 90.0 and -180.0 <= driver_lon <= 180.0):
+                    distance_status = "COORDINATES_OUT_OF_RANGE"
+                elif junction_lat is None or junction_lon is None:
+                    distance_status = "JUNCTION_COORDINATES_CONFIG_ERROR"
+                else:
+                    distance_km = _calculate_haversine(driver_lat, driver_lon, junction_lat, junction_lon)
+                    distance_status = "CALCULATED"
+            except (ValueError, TypeError):
+                distance_status = "INVALID_COORDINATE_FORMAT"
     else:
         distance_status = "COORDINATES_NOT_PROVIDED"
 

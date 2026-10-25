@@ -79,6 +79,27 @@ class TestDriverAdviceDemo(unittest.TestCase):
         self.assertIsNone(telemetry["straight_line_distance_km"])
         self.assertEqual(telemetry["status"], "COORDINATES_OUT_OF_RANGE")
 
+    def test_nan_and_inf_coordinates_guarded(self):
+        for bad_val in ["nan", "inf", "-inf"]:
+            res = self.client.get(f'/api/driver_advice?corridor=North&lat={bad_val}&lon=77.6245')
+            self.assertEqual(res.status_code, 200)
+            telemetry = res.get_json()["distance_telemetry"]
+            self.assertIsNone(telemetry["straight_line_distance_km"])
+            self.assertEqual(telemetry["status"], "INVALID_COORDINATE_FORMAT")
+
+    def test_corridor_length_limit(self):
+        oversized = "A" * 35
+        res = self.client.get(f'/api/driver_advice?corridor={oversized}')
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("exceeds maximum allowed length", res.get_json().get("message", ""))
+
+    def test_whitespace_padded_coordinates(self):
+        res = self.client.get('/api/driver_advice?corridor=North&lat=%2012.9352%20&lon=%2077.6245%20')
+        self.assertEqual(res.status_code, 200)
+        telemetry = res.get_json()["distance_telemetry"]
+        self.assertEqual(telemetry["status"], "CALCULATED")
+        self.assertIsInstance(telemetry["straight_line_distance_km"], float)
+
     def test_valid_gps_calculation(self):
         res = self.client.get('/api/driver_advice?corridor=North&lat=12.9352&lon=77.6245')
         self.assertEqual(res.status_code, 200)
