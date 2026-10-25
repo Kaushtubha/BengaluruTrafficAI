@@ -27,6 +27,7 @@ build/
 
 # Snapshots / uploads
 ai/snapshots/
+snapshots/
 
 # Node / Frontend
 node_modules/
@@ -36,7 +37,7 @@ frontend/dist/
 frontend/.next/
 
 # IDE & Editor
-.vscode/settings.json
+.vscode/
 .idea/
 *.sublime-workspace
 *.swp
@@ -50,3 +51,11 @@ desktop.ini
 # Logs
 *.log
 logs/
+
+# Certificates & Private Keys
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
