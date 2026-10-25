@@ -621,7 +621,7 @@ export default function Dashboard() {
               { name: 'East Lane 🚒', val: 'East' },
               { name: 'West Lane 🚒', val: 'West' }
             ].map(({ name, val }) => {
-              const active = activeOverride === val;
+              const active = activeOverride === val || (!activeOverride && signalData?.priority_lane === val);
               return (
                 <button
                   key={val}
@@ -640,7 +640,7 @@ export default function Dashboard() {
           
           <button
             onClick={handleClearOverride}
-            disabled={!activeOverride}
+            disabled={!activeOverride && (!signalData?.priority_lane || signalData.priority_lane === '--')}
             className="w-full py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/5 text-rose-400 font-semibold text-xs transition-all hover:bg-rose-500/10 active:scale-98 disabled:opacity-30 disabled:pointer-events-none"
           >
             Clear Override Protocols
