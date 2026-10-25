@@ -145,10 +145,12 @@ export default function DriverPortal() {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
           <button
             onClick={() => setAutoRefresh(v => !v)}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-2 transition-all ${
+            aria-label="Toggle automated live synchronization (refreshes every 4 seconds)"
+            aria-pressed={autoRefresh}
+            className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-2 transition-all touch-manipulation focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
               autoRefresh
                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-sm'
                 : 'bg-slate-100 dark:bg-dark-800 border-slate-200 dark:border-dark-700 text-slate-500 dark:text-dark-400'
@@ -162,7 +164,8 @@ export default function DriverPortal() {
           <button
             onClick={handleFetch}
             disabled={driverLoading}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-dark-750 text-slate-600 dark:text-dark-200 transition-all shadow-sm disabled:opacity-50"
+            aria-label="Refresh commuter telemetry immediately"
+            className="p-2.5 rounded-xl border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 hover:bg-slate-50 dark:hover:bg-dark-750 text-slate-600 dark:text-dark-200 transition-all shadow-sm disabled:opacity-50 touch-manipulation focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
             title="Refresh now"
           >
             <RefreshCw size={15} className={driverLoading ? 'animate-spin text-amber-500' : ''} />
@@ -171,7 +174,7 @@ export default function DriverPortal() {
       </motion.div>
 
       {/* ── Data Provenance & Junction Disclosure ───────────────── */}
-      <motion.div variants={rise} className="glass-card p-5 rounded-2xl border border-white/60 dark:border-white/[0.08] relative overflow-hidden">
+      <motion.div variants={rise} className="glass-card p-4 sm:p-5 rounded-2xl border border-white/60 dark:border-white/[0.08] relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className={`p-2.5 rounded-xl shrink-0 mt-0.5 ${
@@ -181,7 +184,7 @@ export default function DriverPortal() {
             }`}>
               <Info size={18} />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-white">
                   Data Provenance:
@@ -219,6 +222,8 @@ export default function DriverPortal() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
+            role="alert"
+            aria-live="assertive"
             className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 flex items-center gap-3.5"
           >
             <ShieldAlert size={22} className="text-rose-500 shrink-0 animate-bounce" />
@@ -237,7 +242,7 @@ export default function DriverPortal() {
       {/* ── Approach Corridor Selection Grid ──────────────────── */}
       <motion.div variants={rise} className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-dark-400">
+          <label id="corridor-group-label" className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-dark-400">
             Select Your Approach Corridor
           </label>
           <span className="text-xs text-slate-400 dark:text-dark-400">
@@ -245,7 +250,11 @@ export default function DriverPortal() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div
+          role="radiogroup"
+          aria-labelledby="corridor-group-label"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"
+        >
           {CORRIDORS.map(corridor => {
             const isSelected = selectedCorridor === corridor.id;
             const count = (selectedCorridor === corridor.id && approachInfo.visible_vehicle_count != null)
@@ -256,10 +265,20 @@ export default function DriverPortal() {
             return (
               <motion.button
                 key={corridor.id}
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={0}
+                aria-label={`${corridor.name}, heading ${corridor.heading}. Approach vehicle count: ${count}. Signal status: ${isLaneActive ? 'Green' : 'Red'}`}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedCorridor(corridor.id)}
-                className={`p-4 rounded-2xl text-left border transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelectedCorridor(corridor.id);
+                  }
+                }}
+                className={`p-4 rounded-2xl text-left border transition-all duration-200 relative overflow-hidden flex flex-col justify-between touch-manipulation focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none focus:outline-none ${
                   isSelected
                     ? 'bg-amber-500/10 dark:bg-amber-500/[0.12] border-amber-500/40 shadow-glow-sm'
                     : 'bg-white/80 dark:bg-dark-850/60 border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 dark:hover:border-white/[0.12]'
@@ -295,7 +314,7 @@ export default function DriverPortal() {
       </motion.div>
 
       {/* ── GPS Proximity & Distance Section ───────────────────── */}
-      <motion.div variants={rise} className="glass-card p-6 rounded-2xl border border-white/60 dark:border-white/[0.08] space-y-4">
+      <motion.div variants={rise} className="glass-card p-5 sm:p-6 rounded-2xl border border-white/60 dark:border-white/[0.08] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
@@ -311,11 +330,12 @@ export default function DriverPortal() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleDetectLocation}
               disabled={gpsDetecting}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+              aria-label={gpsDetecting ? 'Detecting current GPS location' : userCoords ? 'Re-detect current location' : 'Detect current GPS location'}
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 touch-manipulation focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
             >
               <MapPin size={14} className={gpsDetecting ? 'animate-bounce' : ''} />
               {gpsDetecting ? 'Detecting Location...' : userCoords ? 'Re-detect Location' : 'Detect My Location'}
@@ -323,7 +343,8 @@ export default function DriverPortal() {
             {userCoords && (
               <button
                 onClick={handleClearLocation}
-                className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-150 dark:bg-dark-800 text-slate-500 hover:text-slate-800 dark:hover:text-white border border-slate-200 dark:border-dark-700 transition-colors"
+                aria-label="Clear current GPS coordinates"
+                className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-150 dark:bg-dark-800 text-slate-500 hover:text-slate-800 dark:hover:text-white border border-slate-200 dark:border-dark-700 transition-colors touch-manipulation focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
               >
                 Clear GPS
               </button>
@@ -333,17 +354,19 @@ export default function DriverPortal() {
 
         {/* Quick Presets with Explicit Approximate Disclosure */}
         <div className="pt-2">
-          <span className="text-[11px] font-semibold text-slate-400 dark:text-dark-400 uppercase tracking-wider block mb-2">
+          <span id="landmark-presets-label" className="text-[11px] font-semibold text-slate-400 dark:text-dark-400 uppercase tracking-wider block mb-2">
             Or select an approximate reference landmark (not your actual location):
           </span>
-          <div className="flex flex-wrap gap-2">
+          <div role="group" aria-labelledby="landmark-presets-label" className="flex flex-wrap gap-2">
             {LANDMARKS.map(lm => {
               const isActive = userCoords?.lat === lm.lat && userCoords?.lon === lm.lon;
               return (
                 <button
                   key={lm.name}
+                  aria-label={`Select ${lm.name} reference landmark preset`}
+                  aria-pressed={isActive}
                   onClick={() => setUserCoords({ lat: lm.lat, lon: lm.lon })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all touch-manipulation focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
                     isActive
                       ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
                       : 'bg-slate-50 dark:bg-dark-800/80 border-slate-200 dark:border-dark-700 text-slate-600 dark:text-dark-300 hover:border-amber-500/50'
