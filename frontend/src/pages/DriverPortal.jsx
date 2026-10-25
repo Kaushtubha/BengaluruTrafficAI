@@ -112,7 +112,7 @@ export default function DriverPortal() {
 
   // ── Exact Schema Field Mapping Against Real Backend ────────
   const advice = driverAdvice || {};
-  const isSimulated = advice.data_source === 'demo_sim';
+  const isSimulated = (advice.data_source === 'demo_sim' || advice.data_provenance === 'demo_sim');
   const junctionInfo = advice.junction || {};
   const approachInfo = advice.approach || {};
   const distanceTelemetry = advice.distance_telemetry || {};
@@ -120,12 +120,15 @@ export default function DriverPortal() {
   const corridorStatus = advice.corridor_status || {};
   const guidelines = advice.safety_guidelines || [];
 
-  const congestionLevel = approachInfo.congestion_level || trafficData?.congestion_level || 'Normal';
+  const rawCongestion = approachInfo.congestion_level || trafficData?.congestion_level;
+  const normalizedCongestion = (typeof rawCongestion === 'string' && rawCongestion.length > 0)
+    ? (rawCongestion.charAt(0).toUpperCase() + rawCongestion.slice(1).toLowerCase())
+    : 'Medium';
   const congestionBadge = {
     Low: { bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', label: 'Flowing Smoothly' },
     Medium: { bg: 'bg-amber-500/10 text-amber-500 border-amber-500/20', label: 'Moderate Density' },
     High: { bg: 'bg-rose-500/10 text-rose-500 border-rose-500/20', label: 'Heavy Congestion' },
-  }[congestionLevel] || { bg: 'bg-slate-500/10 text-slate-400 border-slate-500/20', label: 'Calculating...' };
+  }[normalizedCongestion] || { bg: 'bg-slate-500/10 text-slate-400 border-slate-500/20', label: rawCongestion || 'Moderate Density' };
 
   const isGreenActive = (signalData?.active_lane === selectedCorridor);
 
@@ -300,8 +303,8 @@ export default function DriverPortal() {
         >
           {CORRIDORS.map(corridor => {
             const isSelected = selectedCorridor === corridor.id;
-            const count = (selectedCorridor === corridor.id && approachInfo.visible_vehicle_count != null)
-              ? approachInfo.visible_vehicle_count
+            const count = (selectedCorridor === corridor.id && (approachInfo.visible_vehicle_count != null || approachInfo.approach_queue != null))
+              ? (approachInfo.visible_vehicle_count ?? approachInfo.approach_queue)
               : (trafficData?.vehicle_counts?.[corridor.id] ?? 0);
             const isLaneActive = signalData?.active_lane === corridor.id;
 
@@ -493,7 +496,7 @@ export default function DriverPortal() {
               <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/[0.05]">
                 <span className="text-xs text-slate-400 dark:text-dark-400">Green Time Allotted</span>
                 <span className="text-sm font-mono font-bold text-slate-800 dark:text-white">
-                  {approachInfo.assigned_green_time_sec ?? signalData?.green_times?.[selectedCorridor] ?? 0}s
+                  {approachInfo.assigned_green_time_sec ?? approachInfo.approach_green_time_sec ?? signalData?.green_times?.[selectedCorridor] ?? 0}s
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/[0.05]">
@@ -544,7 +547,7 @@ export default function DriverPortal() {
               <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/[0.05]">
                 <span className="text-xs text-slate-400 dark:text-dark-400">Vehicles in Approach</span>
                 <span className="text-sm font-mono font-bold text-slate-800 dark:text-white">
-                  {approachInfo.visible_vehicle_count ?? trafficData?.vehicle_counts?.[selectedCorridor] ?? 0}
+                  {approachInfo.visible_vehicle_count ?? approachInfo.approach_queue ?? trafficData?.vehicle_counts?.[selectedCorridor] ?? 0}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/[0.05]">

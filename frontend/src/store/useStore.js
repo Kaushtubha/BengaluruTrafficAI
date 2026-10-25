@@ -8,7 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 5000,
+  timeout: 12000,
 });
 
 export const useStore = create((set, get) => ({
