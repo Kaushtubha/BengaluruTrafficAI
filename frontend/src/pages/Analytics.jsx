@@ -46,7 +46,7 @@ export default function Analytics() {
 
   // Build violation history over time
   useEffect(() => {
-    const now = time.toLocaleTimeString('en-US', { hour12: false });
+    const now = new Date().toLocaleTimeString('en-US', { hour12: false });
     setViolationHistory(prev => {
       const next = [...prev, {
         time: now,
@@ -75,9 +75,9 @@ export default function Analytics() {
     { subject: 'West', A: trafficData.vehicle_counts?.West || 0 },
   ];
 
-  const laneBarData = Object.entries(trafficData.vehicle_counts || {}).map(([lane, count]) => ({
+  const laneBarData = ['North', 'South', 'East', 'West'].map(lane => ({
     lane,
-    vehicles: count,
+    vehicles: trafficData.vehicle_counts?.[lane] || 0,
     greenTime: signalData.green_times?.[lane] || 0,
   }));
 
@@ -118,7 +118,7 @@ export default function Analytics() {
             Traffic Analytics
           </h2>
           <p className="text-slate-400 text-sm mt-2 font-sans max-w-lg">
-            Deep-dive into violation patterns, lane load distributions, and signal efficiency metrics at Silk Board Junction.
+            Deep-dive into violation patterns, lane load distributions, and signal efficiency metrics at {trafficData.junction || 'Silk Board Junction'}.
           </p>
         </div>
 
@@ -282,7 +282,8 @@ export default function Analytics() {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(trafficData.vehicle_counts || {}).map(([lane, count]) => {
+              {['North', 'South', 'East', 'West'].map(lane => {
+                const count = trafficData.vehicle_counts?.[lane] || 0;
                 const total = trafficData.total_vehicles || 1;
                 const pct = Math.round((count / total) * 100);
                 const greenTime = signalData.green_times?.[lane] || 0;
@@ -325,7 +326,7 @@ export default function Analytics() {
           </table>
         </div>
         <div className="mt-4 pt-3 border-t border-white/[0.03] flex justify-between items-center text-xs text-slate-500">
-          <span>Cycle Time: <span className="text-amber-400 font-mono font-bold">{signalData.cycle_time}s</span></span>
+          <span>Cycle Time: <span className="text-amber-400 font-mono font-bold">{signalData.cycle_time || 0}s</span></span>
           <span>Updated: <span className="font-mono text-slate-400">{time.toLocaleTimeString('en-US', { hour12: false })}</span></span>
         </div>
       </motion.div>

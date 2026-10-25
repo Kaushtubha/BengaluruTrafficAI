@@ -172,7 +172,7 @@ export default function Dashboard() {
             {getGreeting()}, Operator.
           </h2>
           <p className="text-slate-400 text-sm mt-2 font-sans max-w-lg">
-            Monitor real-time vehicle flow, adaptive signal configurations, and red light jumping violations at Silk Board, Bengaluru.
+            Monitor real-time vehicle flow, adaptive signal configurations, and red light jumping violations at {trafficData.junction || 'Silk Board, Bengaluru'}.
           </p>
         </div>
 
@@ -215,7 +215,7 @@ export default function Dashboard() {
           <MapPin size={14} className="text-amber-400 shrink-0" />
           <div>
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Junction</p>
-            <p className="text-sm font-semibold text-slate-200 font-mono">Silk Board, Bengaluru</p>
+            <p className="text-sm font-semibold text-slate-200 font-mono">{trafficData.junction || 'Silk Board, Bengaluru'}</p>
           </div>
         </div>
         <div className="h-8 w-px bg-white/[0.05] hidden sm:block" />
@@ -362,7 +362,7 @@ export default function Dashboard() {
         </div>
         <div className="mt-5 pt-4 border-t border-white/[0.03] flex justify-between items-center text-xs text-slate-400">
           <span>Adaptive Signal Plan Optimization Loop</span>
-          <span>Total Cycle Time: <span className="font-mono font-bold text-amber-400" id="cycle-time">{signalData.cycle_time}s</span></span>
+          <span>Total Cycle Time: <span className="font-mono font-bold text-amber-400" id="cycle-time">{signalData.cycle_time || 0}s</span></span>
         </div>
       </motion.div>
 
