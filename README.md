@@ -226,6 +226,8 @@ Full live traffic state snapshot.
   "junction": "Silk Board, Bengaluru",
   "active_lane": "South",
   "congestion_level": "Medium",
+  "congestion_provenance": "synthetic_demo_rule",
+  "is_synthetic_congestion_model": true,
   "vehicle_counts": {
     "North": 12, "South": 18, "East": 9, "West": 4
   },
@@ -235,14 +237,26 @@ Full live traffic state snapshot.
   "signal_plan": {
     "green_times": { "North": 28.3, "South": 37.5, "East": 22.1, "West": 12.1 },
     "priority_lane": "South",
-    "cycle_time": 100.0
+    "cycle_time": 100.0,
+    "emergency_override": false,
+    "emergency_lane": null
   },
   "mode": "demo"
 }
 ```
 
 ### `GET /api/signal`
-Current adaptive signal plan.
+Current adaptive signal plan with emergency override status.
+
+```json
+{
+  "green_times": { "North": 28.3, "South": 37.5, "East": 22.1, "West": 12.1 },
+  "priority_lane": "South",
+  "cycle_time": 100.0,
+  "emergency_override": false,
+  "emergency_lane": null
+}
+```
 
 ### `GET /api/violations`
 Violation breakdown by category.
@@ -295,7 +309,8 @@ Commuter guidance and corridor metrics for drivers approaching the junction.
     "total_junction_vehicles": 43,
     "assigned_green_time_sec": 28.3,
     "cycle_time_sec": 100.0,
-    "congestion_level": "Medium"
+    "congestion_level": "Medium",
+    "congestion_provenance": "heuristic_rule_estimate"
   },
   "distance_telemetry": {
     "calculation_method": "Haversine Geodesic (Straight-Line)",
@@ -416,12 +431,16 @@ VITE_API_URL=https://bengalurutrafficai.onrender.com
 
 ### 🧪 Step 3 — Running Automated Tests
 
-Run the regression test suite across both live and demo backends using Python's standard `unittest` library (no external test runners required):
+Run the complete 46-test regression test suite across both live and demo backends using Python's standard `unittest` library (no external test runners required):
 
 ```bash
-# Run all tests
+# Run all 46 unit and integration tests across both suites
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
+
+**Test Coverage Highlights:**
+- `tests.test_traffic_intelligence`: Signal service proportional allocations, base green minimums, emergency overrides, Random Forest congestion predictor boundaries and provenance, speed estimator monotonic interval caps, and tracking violation deduplication (25 tests).
+- `tests.test_driver_advice`: Demonstration backend API schema contracts, query parameter sanitization, distance Haversine telemetry, junction environment coordinates, and local CV mode endpoints (21 tests).
 
 ---
 
@@ -493,7 +512,10 @@ In accordance with strict telemetry honesty principles:
 1. **Straight-Line vs. Road Distance**: Commuter proximity reported by `/api/driver_advice` is calculated using the spherical Haversine formula (Euclidean straight-line distance). It does **not** represent road network driving distance, turn-by-turn routing, or road congestion delays.
 2. **FOV-Bounded Queue Estimates**: Field-of-view cameras cannot observe traffic queues beyond their optical coverage. Therefore, corridor delay is reported as `ESTIMATE_UNAVAILABLE` rather than extrapolating speculative queue delays.
 3. **Alternate Route Availability**: The platform monitors the local junction and does not fabricate detour directions; alternate route suggestions are marked `DATA_UNAVAILABLE`.
-4. **Data Provenance Transparency**: Every response explicitly identifies its origin mode via `data_provenance` (`live_cv` for the local YOLOv8 inference pipeline or `demo_sim` for the cloud demonstration mock loop). Simulated observations are never represented as real sensor data.
+4. **Data Provenance Transparency**: Every response explicitly identifies its origin mode via `data_source` (`live_cv` for the local YOLOv8 inference pipeline or `demo_sim` for the cloud demonstration mock loop). Simulated observations are never represented as real sensor data.
+5. **Uncalibrated Speed Estimation**: The speed estimator in local computer-vision mode computes relative pixel displacement using an estimated pixel-to-meter heuristic ratio. Without geometric camera matrix calibration, camera homography matrix, and physical reference markers, speed values represent uncalibrated motion estimates rather than legally certified or calibrated real-world radar speeds.
+6. **Synthetic Congestion Classification**: The Random Forest congestion classifier is trained on rule-generated synthetic density patterns. While mathematically valid for demonstrating ML inference in a web dashboard, it is an exploratory heuristic model and does not represent an empirically calibrated model trained on multi-month real-world loop detector observations.
+7. **Emergency Override Authenticity**: Priority overrides are simulated or triggered via emergency vehicle classification flags, directly driving the adaptive signal timing algorithm with full visual differentiation across the dashboard and portal.
 
 ---
 
