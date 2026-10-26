@@ -10,7 +10,15 @@ from backend.congestion_predictor import predict_congestion
 from ai.violation_detector import check_red_light_violation, get_violations, STOP_LINE_Y
 from ai.wrong_side_detector import update_track, check_wrong_side, get_wrong_side_violations
 from ai.helmet_detector import check_helmet_violation, get_helmet_violations
-from ai.speed_estimator import check_speed_violation, get_speed_violations, SPEED_LIMIT_KMPH
+from ai.speed_estimator import (
+    check_speed_violation,
+    calculate_speed,
+    update_speed,
+    get_speed_violations,
+    SPEED_LIMIT_KMPH,
+    MAX_PLAUSIBLE_SPEED_KMPH,
+    MAX_TRACK_AGE_SECONDS,
+)
 
 
 class TestSignalService(unittest.TestCase):
@@ -134,6 +142,65 @@ class TestViolationDeduplication(unittest.TestCase):
         is_viol2, v2 = check_helmet_violation(box, "Motorcycle", track_id=track_id)
         self.assertFalse(is_viol2)
         self.assertIsNone(v2)
+
+
+class TestSpeedEstimator(unittest.TestCase):
+    """Test velocity estimation, monotonic time handling, interval safety, and glitch protection."""
+
+    def test_null_track_id_safe(self):
+        is_speeding, viol, speed = check_speed_violation(None, 100, 100)
+        self.assertFalse(is_speeding)
+        self.assertIsNone(viol)
+        self.assertEqual(speed, 0.0)
+        self.assertEqual(calculate_speed(None), 0.0)
+
+    def test_zero_elapsed_time_returns_zero(self):
+        track_id = 1001
+        update_speed(track_id, 100, 100, timestamp=10.0)
+        update_speed(track_id, 200, 200, timestamp=10.0)
+        speed = calculate_speed(track_id)
+        self.assertEqual(speed, 0.0)
+
+    def test_negative_elapsed_time_returns_zero(self):
+        track_id = 1002
+        update_speed(track_id, 100, 100, timestamp=15.0)
+        update_speed(track_id, 200, 200, timestamp=10.0)
+        speed = calculate_speed(track_id)
+        self.assertEqual(speed, 0.0)
+
+    def test_stale_tracking_gap_resets(self):
+        track_id = 1003
+        update_speed(track_id, 100, 100, timestamp=0.0)
+        # Tracking gap exceeding MAX_TRACK_AGE_SECONDS
+        update_speed(track_id, 200, 200, timestamp=MAX_TRACK_AGE_SECONDS + 1.0)
+        speed = calculate_speed(track_id)
+        self.assertEqual(speed, 0.0)
+
+    def test_extreme_speed_spike_capped(self):
+        track_id = 1004
+        update_speed(track_id, 0, 0, timestamp=0.0)
+        # Unrealistic pixel displacement over 0.01s (5000 pixels)
+        update_speed(track_id, 3000, 4000, timestamp=0.01)
+        speed = calculate_speed(track_id)
+        self.assertLessEqual(speed, MAX_PLAUSIBLE_SPEED_KMPH)
+
+    def test_speeding_deduplication_and_estimate_type(self):
+        track_id = 1005
+        # Move 100 pixels in 0.1s: dist = 100 * 0.05 = 5m / 0.1s = 50 m/s = 180 km/h (> 40 km/h)
+        is_sp1, v1, s1 = check_speed_violation(track_id, 100, 100, timestamp=1.0)
+        is_sp1, v1, s1 = check_speed_violation(track_id, 200, 100, timestamp=1.1)
+        self.assertTrue(is_sp1)
+        self.assertIsNotNone(v1)
+        self.assertEqual(v1["speed_type"], "estimated_uncalibrated")
+
+        # Subsequent check for same track_id must deduplicate
+        is_sp2, v2, s2 = check_speed_violation(track_id, 300, 100, timestamp=1.2)
+        self.assertTrue(is_sp2)
+        # Violation logged previously; must not append duplicate to speed_violations
+        self.assertEqual(
+            sum(1 for v in get_speed_violations() if v.get("track_id") == track_id),
+            1
+        )
 
 
 if __name__ == "__main__":
