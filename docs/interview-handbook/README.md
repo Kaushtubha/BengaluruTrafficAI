@@ -6,7 +6,9 @@ Welcome to the **BengaluruTrafficAI Technical Report and Interview Preparation H
 
 ## 📚 Handbook Structure
 
-The technical report is structured into 26 comprehensive, modular chapters within `chapters/`, orchestrated by the master document `BengaluruTrafficAI_Technical_Report.tex`:
+The technical report is available in two equivalent formats:
+1. **Modular Version:** Orchestrated by the master document [`BengaluruTrafficAI_Technical_Report.tex`](BengaluruTrafficAI_Technical_Report.tex) which imports 26 individual chapters from the `chapters/` folder.
+2. **Single-File Consolidated Version:** [`BengaluruTrafficAI_Single_Complete.tex`](BengaluruTrafficAI_Single_Complete.tex) which bundles all 26 chapters and preamble into a single 2,790-line self-contained LaTeX document for single-file copy-pasting into Overleaf or any LaTeX IDE.
 
 | Chapter | Title | Primary Focus & Source References |
 | :--- | :--- | :--- |
