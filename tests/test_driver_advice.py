@@ -15,7 +15,14 @@ BACKEND_DIR = os.path.join(PROJECT_ROOT, 'backend')
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
+try:
+    import flask
+    HAS_FLASK = True
+except ImportError:
+    HAS_FLASK = False
 
+
+@unittest.skipUnless(HAS_FLASK, "Flask is required for backend API client integration tests")
 class TestDriverAdviceDemo(unittest.TestCase):
     """Tests for backend/app_demo.py (Render free-tier simulation mode)."""
 
@@ -128,6 +135,7 @@ class TestDriverAdviceDemo(unittest.TestCase):
             self.assertEqual(res.status_code, 200, f"Endpoint {endpoint} failed")
 
 
+@unittest.skipUnless(HAS_FLASK, "Flask is required for backend API client integration tests")
 class TestDriverAdviceLiveCV(unittest.TestCase):
     """Tests for backend/app.py (Local Computer Vision mode)."""
 
@@ -167,6 +175,7 @@ class TestDriverAdviceLiveCV(unittest.TestCase):
             self.assertEqual(res.status_code, 200, f"Live CV endpoint {endpoint} failed")
 
 
+@unittest.skipUnless(HAS_FLASK, "Flask is required for backend API client integration tests")
 class TestJunctionEnvironmentConfig(unittest.TestCase):
     """Tests for configurable junction environment variables."""
 

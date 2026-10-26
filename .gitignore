@@ -59,3 +59,11 @@ logs/
 *.crt
 *.pfx
 *.p12
+
+# Local documentation & LaTeX artifacts
+docs/interview-handbook/
+*.tex
+*.aux
+*.out
+*.toc
+*.synctex.gz
