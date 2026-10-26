@@ -39,6 +39,42 @@ class TestSignalService(unittest.TestCase):
         plan = get_signal_plan(counts, emergency_lanes=["North"])
         self.assertEqual(plan["priority_lane"], "North")
         self.assertEqual(plan["green_times"]["North"], MAX_GREEN)
+        self.assertTrue(plan["emergency_override"])
+        self.assertEqual(plan["emergency_lane"], "North")
+
+    def test_standard_plan_has_no_emergency_override(self):
+        counts = {"North": 30, "South": 10, "East": 5, "West": 5}
+        plan = get_signal_plan(counts)
+        self.assertFalse(plan["emergency_override"])
+        self.assertIsNone(plan["emergency_lane"])
+
+    def test_empty_vehicle_counts_graceful_fallback(self):
+        plan = get_signal_plan({})
+        self.assertIn("green_times", plan)
+        self.assertGreaterEqual(plan["cycle_time"], BASE_GREEN)
+        self.assertFalse(plan["emergency_override"])
+        self.assertIn(plan["priority_lane"], ("North", "South", "East", "West"))
+
+    def test_none_vehicle_counts_graceful_fallback(self):
+        plan = get_signal_plan(None)
+        self.assertIn("green_times", plan)
+        self.assertGreaterEqual(plan["cycle_time"], BASE_GREEN)
+        self.assertFalse(plan["emergency_override"])
+
+    def test_negative_vehicle_counts_clamped(self):
+        counts = {"North": -25, "South": 20, "East": 0, "West": 0}
+        times = calculate_green_time(counts)
+        for lane, seconds in times.items():
+            self.assertGreaterEqual(seconds, MIN_GREEN)
+            self.assertLessEqual(seconds, MAX_GREEN)
+
+    def test_emergency_string_lane_normalized(self):
+        counts = {"North": 10, "South": 10, "East": 10, "West": 10}
+        plan = get_signal_plan(counts, emergency_lanes=" South ")
+        self.assertTrue(plan["emergency_override"])
+        self.assertEqual(plan["emergency_lane"], "South")
+        self.assertEqual(plan["priority_lane"], "South")
+        self.assertEqual(plan["green_times"]["South"], MAX_GREEN)
 
 
 class TestCongestionPredictor(unittest.TestCase):

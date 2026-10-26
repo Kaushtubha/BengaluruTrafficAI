@@ -56,21 +56,25 @@ def _get_congestion(total):
     return "High"
 
 def _get_signal_plan(lane_counts, emergency_lane=None):
-    total = sum(lane_counts.values()) or 1
+    counts = lane_counts if isinstance(lane_counts, dict) and lane_counts else {l: 0 for l in LANES}
+    total = sum(counts.values()) or 1
     MIN_GREEN, MAX_GREEN = 10, 60
     green_times = {}
-    for lane, count in lane_counts.items():
+    for lane, count in counts.items():
         proportion = count / total
         green_times[lane] = round(MIN_GREEN + proportion * (MAX_GREEN - MIN_GREEN), 1)
 
-    priority = emergency_lane or max(lane_counts, key=lane_counts.get)
-    if emergency_lane:
-        green_times[emergency_lane] = MAX_GREEN
+    is_override = bool(emergency_lane and emergency_lane in counts)
+    priority = emergency_lane if is_override else (max(counts, key=counts.get) if counts else "North")
+    if is_override:
+        green_times[emergency_lane] = float(MAX_GREEN)
 
     return {
         "green_times": green_times,
         "priority_lane": priority,
-        "cycle_time": round(sum(green_times.values()), 1)
+        "cycle_time": round(sum(green_times.values()), 1),
+        "emergency_override": is_override,
+        "emergency_lane": emergency_lane if is_override else None,
     }
 
 def _maybe_log_violation():

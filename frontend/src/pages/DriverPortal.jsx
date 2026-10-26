@@ -263,7 +263,7 @@ export default function DriverPortal() {
 
       {/* ── Emergency Vehicle Active Alert ─────────────────────── */}
       <AnimatePresence>
-        {signalData?.priority_lane && signalData.priority_lane !== '--' && (
+        {Boolean(signalData?.emergency_override || (signalData?.emergency_lane && signalData.emergency_lane !== '--')) && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -275,7 +275,7 @@ export default function DriverPortal() {
             <ShieldAlert size={22} className="text-rose-500 shrink-0 animate-bounce" />
             <div className="flex-1 text-xs">
               <span className="font-bold text-rose-400 uppercase tracking-wide block">
-                Emergency Priority Vehicle Detected in {signalData.priority_lane} Approach
+                Emergency Priority Vehicle Detected in {signalData.emergency_lane || signalData.priority_lane} Approach
               </span>
               <span className="text-rose-200/90">
                 Automated junction controller has preempted normal cycles to prioritize emergency vehicle clearance. Maintain clear lanes and yield right of way.
@@ -502,7 +502,9 @@ export default function DriverPortal() {
               <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/[0.05]">
                 <span className="text-xs text-slate-400 dark:text-dark-400">Active Priority Approach</span>
                 <span className="text-sm font-semibold text-slate-800 dark:text-white">
-                  {signalData?.priority_lane && signalData.priority_lane !== '--' ? `${signalData.priority_lane} (Emergency)` : 'Standard Rotation'}
+                  {Boolean(signalData?.emergency_override || (signalData?.emergency_lane && signalData.emergency_lane !== '--'))
+                    ? `${signalData.emergency_lane || signalData.priority_lane} (Emergency)`
+                    : 'Standard Rotation'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/[0.05]">
