@@ -220,11 +220,11 @@ export default function Dashboard() {
         </div>
         <div className="h-8 w-px bg-white/[0.05] hidden sm:block" />
         <div className="flex items-center gap-3">
-          <Zap size={14} className={`shrink-0 ${ trafficData.congestion_level === 'High' ? 'text-red-400' : trafficData.congestion_level === 'Medium' ? 'text-amber-400' : 'text-emerald-400' }`} />
+          <Zap size={14} className={`shrink-0 ${ trafficData.congestion_level === 'High' ? 'text-red-400' : trafficData.congestion_level === 'Medium' ? 'text-amber-400' : trafficData.congestion_level === 'Low' ? 'text-emerald-400' : 'text-slate-400' }`} />
           <div>
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Congestion (Heuristic RF)</p>
-            <p className={`text-sm font-bold font-mono ${ trafficData.congestion_level === 'High' ? 'text-red-400' : trafficData.congestion_level === 'Medium' ? 'text-amber-400' : 'text-emerald-400' }`}>
-              {trafficData.congestion_level || 'Loading...'}
+            <p className={`text-sm font-bold font-mono ${ trafficData.congestion_level === 'High' ? 'text-red-400' : trafficData.congestion_level === 'Medium' ? 'text-amber-400' : trafficData.congestion_level === 'Low' ? 'text-emerald-400' : 'text-slate-400' }`}>
+              {trafficData.congestion_level === 'UNAVAILABLE' ? 'Unavailable' : (trafficData.congestion_level || 'Loading...')}
             </p>
           </div>
         </div>
@@ -547,7 +547,7 @@ export default function Dashboard() {
             </svg>
             <div className="absolute bottom-2 left-2 right-2 flex justify-between text-[8px] font-mono text-slate-500">
               <span>LATENCY: ~30ms</span>
-              <span>ESTIMATE: {trafficData.congestion_level}</span>
+              <span>ESTIMATE: {trafficData.congestion_level === 'UNAVAILABLE' ? 'UNAVAILABLE' : (trafficData.congestion_level || 'Loading...')}</span>
             </div>
           </div>
           <div className="w-full text-center mt-3 text-xs text-slate-400">

@@ -68,9 +68,11 @@ export const useStore = create((set, get) => ({
   // Fetch all traffic metrics from Flask API
   fetchTrafficData: async () => {
     try {
-      const statusRes = await api.get('/status');
-      const signalRes = await api.get('/signal');
-      const violationsRes = await api.get('/violations');
+      const [statusRes, signalRes, violationsRes] = await Promise.all([
+        api.get('/status'),
+        api.get('/signal'),
+        api.get('/violations'),
+      ]);
 
       const trafficData = statusRes.data;
       const signalData = signalRes.data;
@@ -82,9 +84,10 @@ export const useStore = create((set, get) => ({
       if (currentHistory.length >= 20) {
         currentHistory.shift();
       }
+      const validTotal = Number.isFinite(trafficData?.total_vehicles) ? trafficData.total_vehicles : 0;
       currentHistory.push({
         time: now,
-        vehicles: trafficData.total_vehicles,
+        vehicles: validTotal,
       });
 
       set({

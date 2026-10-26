@@ -81,11 +81,18 @@ export default function Analytics() {
     greenTime: signalData.green_times?.[lane] || 0,
   }));
 
+  const isCongestionValid = ['Low', 'Medium', 'High'].includes(trafficData.congestion_level);
+  const congestionLabel = isCongestionValid
+    ? `${trafficData.congestion_level} Congestion (Heuristic Estimate)`
+    : trafficData.congestion_level === 'UNAVAILABLE'
+      ? 'Congestion Unavailable'
+      : `${trafficData.congestion_level || 'Loading'} Congestion`;
+
   const congestionColor = {
     Low: '#10b981',
     Medium: '#f59e0b',
     High: '#ef4444',
-  }[trafficData.congestion_level] || '#6366f1';
+  }[trafficData.congestion_level] || (trafficData.congestion_level === 'UNAVAILABLE' ? '#94a3b8' : '#6366f1');
 
   const statCards = [
     { label: 'Total Violations', value: totalViolations, icon: ShieldAlert, color: 'rose', glow: 'rgba(239,68,68,0.15)' },
@@ -126,7 +133,7 @@ export default function Analytics() {
           <div className="px-3 py-1.5 rounded-full border text-xs font-mono font-bold uppercase tracking-wider"
             style={{ color: congestionColor, borderColor: `${congestionColor}30`, backgroundColor: `${congestionColor}10` }}>
             <span className="w-2 h-2 rounded-full inline-block mr-1.5" style={{ backgroundColor: congestionColor }} />
-            {trafficData.congestion_level || 'Loading'} Congestion
+            {congestionLabel}
           </div>
         </div>
       </motion.div>
@@ -246,7 +253,7 @@ export default function Analytics() {
           <span className="text-[9px] font-mono font-semibold text-slate-500 uppercase tracking-widest">Last 15 snapshots</span>
         </div>
         <div className="flex-1 min-h-0">
-          {violationHistory.length > 1 ? (
+          {violationHistory.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={violationHistory} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
                 <XAxis dataKey="time" tick={{ fontSize: 8, fill: '#475569', fontFamily: 'monospace' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
@@ -284,29 +291,37 @@ export default function Analytics() {
             <tbody>
               {['North', 'South', 'East', 'West'].map(lane => {
                 const count = trafficData.vehicle_counts?.[lane] || 0;
-                const total = trafficData.total_vehicles || 1;
-                const pct = Math.round((count / total) * 100);
+                const sumCounts = Object.values(trafficData.vehicle_counts || {}).reduce((acc, v) => acc + (Number(v) || 0), 0);
+                const total = Math.max(trafficData.total_vehicles || 0, sumCounts, 1);
+                const pct = Math.min(100, Math.max(0, Math.round((count / total) * 100)));
                 const greenTime = signalData.green_times?.[lane] || 0;
-                const isActive = lane === trafficData.active_lane;
+                const isEmergency = Boolean(signalData?.emergency_override) && (signalData?.emergency_lane || signalData?.priority_lane) === lane;
+                const isActive = lane === trafficData.active_lane || isEmergency;
                 return (
-                  <tr key={lane} className={`border-b border-white/[0.02] transition-colors ${isActive ? 'bg-amber-500/5' : 'hover:bg-white/[0.015]'}`}>
+                  <tr key={lane} className={`border-b border-white/[0.02] transition-colors ${isEmergency ? 'bg-rose-500/10' : isActive ? 'bg-amber-500/5' : 'hover:bg-white/[0.015]'}`}>
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: LANE_COLORS[lane] }} />
-                        <span className={isActive ? 'text-amber-400 font-bold' : 'text-slate-300'}>{lane}</span>
-                        {isActive && <span className="text-[8px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Active</span>}
+                        <span className={isEmergency ? 'text-rose-400 font-bold' : isActive ? 'text-amber-400 font-bold' : 'text-slate-300'}>{lane}</span>
+                        {isActive && (
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                            isEmergency ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'
+                          }`}>
+                            {isEmergency ? 'Emergency' : 'Active'}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-3 px-3 text-slate-300">{count}</td>
                     <td className="py-3 px-3">
-                      <span className="text-sky-400">{greenTime}s</span>
+                      <span className={isEmergency ? 'text-rose-400 font-bold' : 'text-sky-400'}>{greenTime}s</span>
                     </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden w-20">
                           <div
                             className="h-full rounded-full transition-all duration-700"
-                            style={{ width: `${pct}%`, backgroundColor: LANE_COLORS[lane] }}
+                            style={{ width: `${pct}%`, backgroundColor: isEmergency ? '#f43f5e' : LANE_COLORS[lane] }}
                           />
                         </div>
                         <span className="text-slate-400">{pct}%</span>
@@ -314,9 +329,13 @@ export default function Analytics() {
                     </td>
                     <td className="py-3 px-3">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide ${
-                        isActive ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700/50 text-slate-400'
+                        isEmergency
+                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          : isActive
+                            ? 'bg-amber-500/20 text-amber-400'
+                            : 'bg-slate-700/50 text-slate-400'
                       }`}>
-                        {isActive ? 'GREEN' : 'QUEUED'}
+                        {isEmergency ? 'EMERGENCY' : isActive ? 'GREEN' : 'QUEUED'}
                       </span>
                     </td>
                   </tr>
