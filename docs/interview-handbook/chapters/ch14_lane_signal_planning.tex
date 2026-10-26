@@ -1,0 +1,57 @@
+\chapter{Lane Management and Traffic Signal Planning}
+
+\section{Geometric Spatial Lane Assignment}
+In \texttt{backend/lane\_manager.py}, the camera video frame width ($W = 1280\,\text{pixels}$) is partitioned geometrically into four equal Cartesian vertical strips corresponding to the primary arterial approaches:
+\begin{equation}
+\text{Lane}(cx) =
+\begin{cases}
+\text{North}, & 0 \le cx < \frac{W}{4} \quad [0 \le cx < 320] \\
+\text{South}, & \frac{W}{4} \le cx < \frac{2W}{4} \quad [320 \le cx < 640] \\
+\text{East}, & \frac{2W}{4} \le cx < \frac{3W}{4} \quad [640 \le cx < 960] \\
+\text{West}, & \frac{3W}{4} \le cx \le W \quad [960 \le cx \le 1280]
+\end{cases}
+\end{equation}
+Whenever a tracked vehicle's centroid $(cx, cy)$ is updated, its instantaneous location is incremented in the corresponding corridor bucket.
+
+\section{Adaptive Proportional Green-Time Allocation}
+In \texttt{backend/signal\_service.py}, the adaptive signal optimizer replaces fixed timers with proportional queue balancing.
+
+\subsection{Mathematical Formulation}
+Let $C = \{c_{\text{North}}, c_{\text{South}}, c_{\text{East}}, c_{\text{West}}\}$ represent the clean, non-negative vehicle counts across all four corridors, with total volume $V = \sum_{l \in \text{Lanes}} c_l$.
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Case 1: Zero Traffic ($V = 0$)}:
+    When no vehicles are detected on any lane, equal baseline green durations are assigned:
+    \begin{equation}
+    T_{\text{green}}(l) = T_{\text{base}} = 20.0\,\text{seconds} \quad \forall l \in \text{Lanes}
+    \end{equation}
+    \item \textbf{Case 2: Active Traffic ($V > 0$)}:
+    Green time scales proportionally with lane queue share, bounded by strict minimum and maximum thresholds:
+    \begin{equation}
+    T_{\text{green}}(l) = \text{round}\left( \max\left(T_{\text{min}}, \min\left(T_{\text{max}}, T_{\text{min}} + \frac{c_l}{V} \times (T_{\text{max}} - T_{\text{min}})\right)\right), 1 \right)
+    \end{equation}
+    where:
+    \begin{itemize}
+        \item $T_{\text{min}} = 10.0\,\text{seconds}$ (minimum clearance duration to avoid rapid signal hunting)
+        \item $T_{\text{max}} = 60.0\,\text{seconds}$ (maximum green limit to avoid starvation of opposing lanes)
+    \end{itemize}
+    \item \textbf{Cycle Time}:
+    \begin{equation}
+    T_{\text{cycle}} = \sum_{l \in \text{Lanes}} T_{\text{green}}(l)
+    \end{equation}
+\end{itemize}
+
+\section{Emergency Priority Preemption Mechanics}
+Emergency vehicles (ambulances, police escorts, fire trucks) require immediate right-of-way preemption. When \texttt{emergency\_lanes} is provided to \texttt{get\_signal\_plan()}:
+\begin{enumerate}
+    \item The emergency lane is extracted and verified against valid junction corridors.
+    \item Normal proportional allocation is overridden for that approach:
+    \begin{equation}
+    T_{\text{green}}(l_{\text{emergency}}) = T_{\text{max}} = 60.0\,\text{seconds}
+    \end{equation}
+    \item The priority indicator is set: $\text{priority\_lane} = l_{\text{emergency}}$.
+    \item The override metadata flags are serialized:
+    \begin{equation}
+    \text{emergency\_override} = \text{True}, \quad \text{emergency\_lane} = l_{\text{emergency}}
+    \end{equation}
+\end{enumerate}
+This ensures the dashboard, analytics, and driver portals immediately render emergency badges and advise approaching traffic to yield right-of-way.

@@ -1,0 +1,43 @@
+\chapter{Security, Reliability, and Failure Analysis}
+
+\section{Security Architecture and Threat Modeling}
+Although BengaluruTrafficAI is a prototype research platform, several defense-in-depth principles have been engineered to prevent common web application vulnerabilities.
+
+\subsection{1. Parameter Length Limits (Buffer Overflow / ReDoS Mitigation)}
+In \texttt{backend/app.py} and \texttt{backend/app\_demo.py}, string query parameters undergo length bounds checking:
+\begin{lstlisting}[language=Python]
+if raw_corridor is not None and len(raw_corridor.strip()) > 32:
+    return jsonify({
+        "status": "error",
+        "message": "Corridor parameter exceeds maximum allowed length of 32 characters."
+    }), 400
+\end{lstlisting}
+This prevents oversized string payloads from consuming memory or precipitating catastrophic backtracking in regex evaluators.
+
+\subsection{2. Coordinate Injection and Numeric Sanitization}
+Geographic coordinate parameters (\texttt{lat}, \texttt{lon}) are explicitly stripped, length-checked ($\le 32$ chars), and converted via \texttt{float()}. The system tests for and rejects \texttt{NaN}, \texttt{Inf}, and $- \text{Inf}$, preventing arithmetic poisoning of Haversine distance computations.
+
+\subsection{3. Zero Secret Leakage}
+The repository enforces a clean `.gitignore` structure excluding \texttt{.env}, \texttt{.env.*}, \texttt{*.pem}, \texttt{*.key}, and \texttt{*.cert}. No database connection strings, passwords, or deployment API tokens are stored in tracked git objects.
+
+\section{Reliability Analysis and Failsafe Matrix}
+Table~\ref{tab:failsafe_matrix} documents the failure recovery behaviors engineered across the platform.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.8cm} p{4.2cm} X}
+\toprule
+\textbf{Failure Scenario} & \textbf{Potential System Impact} & \textbf{Engineered Failsafe Mechanism} \\
+\midrule
+\textbf{Camera / Video Drop} & OpenCV fails to read frame (\texttt{ret == False}). & Automatically resets frame pointer to beginning (\texttt{CAP\_PROP\_POS\_FRAMES = 0}) to loop demo video seamlessly. \\
+\textbf{Zero Vehicle Detection} & Division by zero during signal allocation ($V = 0$). & \texttt{calculate\_green\_time()} detects zero sum and falls back to safe base green time ($20.0\,\text{s}$) across all approaches. \\
+\textbf{MongoDB Offline} & Unhandled connection exception crashes Flask server. & Wrapped in \texttt{try...except ServerSelectionTimeoutError}; prints warning and falls back to standard console logging. \\
+\textbf{Backend Cloud Sleep} & Render 15-minute idle spin-down causes 30s latency. & Client Axios timeout set to 12s; displays persistent \texttt{OFFLINE} status pill and auto-retries in background. \\
+\textbf{Coordinate Jitter} & Tracking ID swap creates artificial $500\,\text{km/h}$ speed. & Speed calculation clamps values strictly to $\text{MAX\_PLAUSIBLE\_SPEED\_KMPH} = 180.0\,\text{km/h}$. \\
+\textbf{GPS Denial in Browser} & Commuter denies geolocation permission. & Catches error code 1 (\texttt{PERMISSION\_DENIED}); presents approximate landmark presets (Electronic City, Koramangala). \\
+\bottomrule
+\end{tabularx}
+\caption{System Reliability and Failsafe Response Matrix}
+\label{tab:failsafe_matrix}
+\end{table}

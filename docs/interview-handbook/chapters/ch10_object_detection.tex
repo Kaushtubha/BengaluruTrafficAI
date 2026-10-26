@@ -1,0 +1,31 @@
+\chapter{Object Detection: Basic to Advanced}
+
+\section{Computer Vision Fundamentals: Detection vs. Classification}
+Standard visual image classification predicts a single categorical distribution over an entire image canvas ($\hat{y} = \arg\max P(C|I)$). In high-density traffic monitoring, single-label classification fails completely because multiple interacting objects occupy the scene simultaneously.
+
+\textbf{Object Detection} solves the joint localization and multi-instance recognition problem. For every candidate object $i$ in frame $I$, the model outputs:
+\begin{equation}
+\mathbf{o}_i = \left[ x_{\text{center}}, y_{\text{center}}, w, h, \hat{c}, P(\text{object}) \times P(\hat{c}) \right]
+\end{equation}
+where $x, y, w, h$ denote normalized bounding box coordinates and $P(\hat{c})$ represents class conditional probability.
+
+\section{YOLOv8 Architecture Overview}
+Ultralytics YOLOv8 introduces an anchor-free split-head architecture. Prior anchor-based architectures (e.g., YOLOv3/v4) relied on predefined anchor box aspect ratios, requiring extensive tuning and post-processing non-maximum suppression (NMS) clustering. YOLOv8 predicts bounding box offsets directly from multi-scale feature maps:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Backbone}: Modified CSPDarknet53 with $C2f$ (Cross Stage Partial with 2 convolutions) blocks for high-velocity gradient flow.
+    \item \textbf{Neck}: Path Aggregation Network (PANet) fusing low-level high-resolution spatial features with high-level semantic abstractions across $P_3, P_4, P_5$ scales.
+    \item \textbf{Head}: Decoupled anchor-free prediction heads calculating classification loss via Binary Cross-Entropy (BCE) and regression loss via Complete IoU (CIoU) and Distribution Focal Loss (DFL).
+\end{itemize}
+
+\section{Repository Integration and Class Filtering}
+In \texttt{backend/app.py}, the model is instantiated using pre-trained COCO dataset weights:
+\begin{lstlisting}[language=Python]
+model = YOLO("yolov8n.pt")
+VEHICLE_CLASSES = {
+    2: "Car",
+    3: "Motorcycle",
+    5: "Bus",
+    7: "Truck"
+}
+\end{lstlisting}
+Detections corresponding to pedestrian classes ($0$), traffic lights ($9$), or non-vehicular categories are filtered out before tracker ingestion, reducing downstream tracking comparison overhead. A strict confidence threshold ($> 0.40$) eliminates spurious low-certainty background false positives.

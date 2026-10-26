@@ -1,0 +1,47 @@
+\chapter{Driver Assistance Portal and Geospatial Logic}
+
+\section{Commuter Advisory Objectives}
+The Driver Assistance Portal (\texttt{frontend/src/pages/DriverPortal.jsx} and \texttt{/api/driver\_advice}) provides actionable junction telemetry for approaching drivers. By arming drivers with instantaneous phase timers and corridor densities, commuters can anticipate braking patterns and avoid blocking yellow box junctions.
+
+\section{Haversine Geodesic Distance Formulation}
+The backend computes straight-line aerial distance using the spherical Haversine formula:
+\begin{align}
+\Delta\phi &= \phi_{\text{junction}} - \phi_{\text{user}} \quad (\text{radians}) \\
+\Delta\lambda &= \lambda_{\text{junction}} - \lambda_{\text{user}} \quad (\text{radians}) \\
+a &= \sin^2\left(\frac{\Delta\phi}{2}\right) + \cos(\phi_{\text{user}}) \cos(\phi_{\text{junction}}) \sin^2\left(\frac{\Delta\lambda}{2}\right) \\
+c &= 2 \cdot \text{atan2}\left(\sqrt{a}, \sqrt{1 - a}\right) \\
+d_{\text{km}} &= R_{\text{Earth}} \times c \quad \text{where } R_{\text{Earth}} = 6371.0\,\text{km}
+\end{align}
+
+\begin{lstlisting}[language=Python,caption={Haversine Distance Implementation in Python}]
+def _calculate_haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0  # Earth radius in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
+         math.sin(dlon / 2) ** 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return round(R * c, 2)
+\end{lstlisting}
+
+\section{Coordinate Validation and Boundary Enforcements}
+In \texttt{backend/app.py} and \texttt{backend/app\_demo.py}, incoming parameters undergo strict sanity checks:
+\begin{itemize}[leftmargin=*]
+    \item String length is capped at 32 characters to prevent buffer overflow attacks or regex Denial of Service.
+    \item Coordinates are converted to floating-point numbers with explicit guards against \texttt{NaN} and \texttt{Inf}.
+    \item Geographic ranges are bounded to $-90.0 \le \text{lat} \le 90.0$ and $-180.0 \le \text{lon} \le 180.0$.
+    \item If coordinates violate bounds, the API returns \texttt{distance\_telemetry.status: "COORDINATES\_OUT\_OF\_RANGE"} with \texttt{distance\_km: null}.
+    \item If only latitude or only longitude is supplied, the API responds with \texttt{INCOMPLETE\_COORDINATES\_MISSING\_LON} or \texttt{INCOMPLETE\_COORDINATES\_MISSING\_LAT}.
+\end{itemize}
+
+\section{Straight-Line vs. Real Road Distance Disclosures}
+\begin{conceptbox}[Geodesic Proximity vs. Road Driving Distance]
+The Haversine calculation determines the theoretical great-circle aerial distance (as the crow flies) between commuter GPS coordinates and the junction center. It does \textbf{not} reflect:
+\begin{enumerate}
+    \item Actual street topology, elevated flyovers (e.g., the Electronic City Expressway), or mandatory U-turns.
+    \item Physical driving distance, which is typically $20\%\text{--}45\%$ longer in complex urban networks.
+    \item Dynamic queue delays.
+\end{enumerate}
+The Driver Assistance Portal renders an explicit notice informing commuters of these boundaries, preventing misleading travel time assumptions.
+\end{conceptbox}

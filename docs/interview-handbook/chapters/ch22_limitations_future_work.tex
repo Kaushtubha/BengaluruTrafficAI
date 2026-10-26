@@ -1,0 +1,29 @@
+\chapter{Limitations and Future Improvements}
+
+\section{Systematic Limitations Matrix}
+Table~\ref{tab:limitations_matrix} documents all known architectural and empirical limitations, explaining why they exist, their practical impact, and the engineering prerequisites required to resolve them.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.2cm} p{3.2cm} p{3.2cm} X}
+\toprule
+\textbf{Documented Limitation} & \textbf{Root Cause / Origin} & \textbf{Practical Impact} & \textbf{Proposed Engineering Solution} \\
+\midrule
+\textbf{Uncalibrated Speed Estimation} & Fixed $0.05\,\text{m/px}$ ratio lacks perspective homography calibration matrix. & Speed values are relative visual motion estimates; background speeds are underestimated. & Calibrate camera with 4-point ground-plane planar homography transform matrix $H \in \mathbb{R}^{3 \times 3}$. \\
+\textbf{Synthetic Congestion Rules} & Random Forest trained on synthetic piecewise rules ($<15, 15\text{--}34, \ge 35$). & Model proves pipeline integration, but lacks empirical multi-month roadway sensor validation. & Ingest long-term physical sensor logs (inductive loops, TomTom/Google Traffic APIs) with cross-validation. \\
+\textbf{Field-of-View Queue Delay} & Monocular camera cannot observe queues extending beyond optical lens horizon. & Estimated clearance delay is reported as \texttt{ESTIMATE\_UNAVAILABLE}. & Deploy networked multi-camera setups along upstream approaches or ingest municipal radar sensors. \\
+\textbf{Geodesic vs. Road Distance} & Haversine calculates great-circle spherical distance (aerial path). & Distance is $20\%\text{--}40\%$ shorter than actual road topology with flyover ramps. & Integrate open-source road network routing engines (OSRM / OpenStreetMap graph routing). \\
+\textbf{Demonstration Video vs. Live CCTV} & Local CV mode runs on sample video file (\texttt{sample\_traffic.mp4}). & Does not reflect real-time live weather or lighting shifts on Silk Board intersection. & Implement live RTSP video stream ingestion with adaptive exposure normalization. \\
+\bottomrule
+\end{tabularx}
+\caption{Systematic Architectural and Algorithmic Limitations Matrix}
+\label{tab:limitations_matrix}
+\end{table}
+
+\section{Proposed Future Technical Roadmap}
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Camera Matrix Calibration Module}: Implementation of an interactive calibration tool allowing traffic operators to click four physical ground lane markers with known surveyed distances, generating a perspective rectification matrix.
+    \item \textbf{Automatic License Plate Recognition (ALPR)}: Integration of secondary optical character recognition (OCR) models (e.g., PaddleOCR) for automated challan generation on confirmed red-light jumps.
+    \item \textbf{Arterial Green-Wave Coordination}: Expanding the single-junction proportional algorithm to support coordinated phase offsets across adjacent intersections along Outer Ring Road and Hosur Road.
+\end{enumerate}

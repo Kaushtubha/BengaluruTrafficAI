@@ -1,0 +1,71 @@
+\chapter{Congestion Classification and Machine Learning}
+
+\section{Machine Learning Pipeline Overview}
+In \texttt{backend/congestion\_predictor.py}, vehicular volume is classified into discrete operational congestion categories: \texttt{"Low"}, \texttt{"Medium"}, and \texttt{"High"}.
+
+The model is instantiated as a scikit-learn \texttt{RandomForestClassifier} with 10 decision trees:
+\begin{lstlisting}[language=Python]
+model = RandomForestClassifier(n_estimators=10, random_state=42)
+model.fit(X_train, y_train)
+\end{lstlisting}
+
+\section{Feature Space and Synthetic Matrix Generation}
+The model consumes a 3-dimensional feature vector:
+\begin{equation}
+\mathbf{x} = \left[ \text{hour}, \text{total\_vehicles}, \text{active\_lane\_count} \right]
+\end{equation}
+where $\text{hour} \in [0, 23]$, $\text{total\_vehicles} \in [0, 120]$, and $\text{active\_lane\_count} \approx 0.4 \times \text{total\_vehicles}$.
+
+\subsection{Decision Boundary Mapping}
+The synthetic training matrix generates deterministic supervised labels according to step functions:
+\begin{equation}
+y(\mathbf{x}) =
+\begin{cases}
+0 \quad (\text{"Low"}), & \text{total\_vehicles} < 15 \\
+1 \quad (\text{"Medium"}), & 15 \le \text{total\_vehicles} < 35 \\
+2 \quad (\text{"High"}), & \text{total\_vehicles} \ge 35
+\end{cases}
+\end{equation}
+
+\section{Input Sanitization and Robustness Boundaries}
+In \texttt{_sanitize_inputs()}, inputs are guarded against non-numeric types, NaN, infinity, and negative numbers:
+\begin{lstlisting}[language=Python]
+def _sanitize_inputs(hour, total_vehicles, active_lane_count):
+    if total_vehicles is None:
+        return None
+    try:
+        tot = float(total_vehicles)
+        if math.isnan(tot) or math.isinf(tot) or tot < 0:
+            return None
+    except (ValueError, TypeError):
+        return None
+
+    # Default to current local hour if hour is missing or invalid
+    try:
+        h = int(hour)
+        if not (0 <= h <= 23):
+            h = datetime.now().hour
+    except (ValueError, TypeError):
+        h = datetime.now().hour
+
+    try:
+        act = float(active_lane_count)
+        if math.isnan(act) or math.isinf(act) or act < 0:
+            act = int(tot * 0.4)
+    except (ValueError, TypeError):
+        act = int(tot * 0.4)
+
+    return h, tot, act
+\end{lstlisting}
+If input validation fails, the function returns \texttt{"UNAVAILABLE"} instead of raising uncaught exceptions or outputting fabricated classifications.
+
+\section{Transparency Disclosures: Synthetic vs. Empirical ML}
+\begin{limitationbox}[Exploratory Model vs. Real-World Sensor Validation]
+The Random Forest model in this project was trained on rule-generated synthetic patterns rather than empirical ground-truth sensor observations. Consequently:
+\begin{enumerate}
+    \item High test accuracy on this dataset confirms only that the Random Forest correctly learned the synthetic piecewise rule.
+    \item It does \textbf{not} demonstrate empirical forecasting accuracy for physical roadway traffic.
+    \item Real-world municipal deployment would require gathering physical sensor telemetry (inductive loop vehicle counts, TomTom or Google traffic delays, weather metrics) over multiple months, partitioned into strict temporal train/validation/test splits.
+\end{enumerate}
+For this reason, both backend modes return \texttt{congestion\_provenance: "heuristic\_rule\_estimate"} or \texttt{"synthetic\_demo\_rule"}, ensuring total transparency.
+\end{limitationbox}

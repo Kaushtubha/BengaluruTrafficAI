@@ -1,0 +1,66 @@
+\chapter{Deployment and Configuration}
+
+\section{Hosting Architecture Overview}
+The live production deployment operates across two decoupled, zero-cost cloud platforms:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Frontend}: Hosted globally on \textbf{Vercel Edge Network} (\url{https://bengaluru-traffic-ai.vercel.app/}).
+    \item \textbf{Backend REST Service}: Hosted on \textbf{Render Web Services} (\url{https://bengalurutrafficai.onrender.com/}).
+\end{itemize}
+
+\section{Vercel SPA Rewrite Configuration}
+React Router implements client-side dynamic routing across \texttt{/}, \texttt{/analytics}, and \texttt{/driver}. In traditional static web hosting, direct navigation or browser refresh on deep links triggers HTTP 404 Not Found errors because the static server looks for physical files at \texttt{/analytics/index.html}.
+
+To solve this, \texttt{frontend/vercel.json} specifies automated server-side URL rewrites:
+\begin{lstlisting}[language=json,caption={Vercel SPA Rewrite Rules (\texttt{frontend/vercel.json})}]
+{
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+\end{lstlisting}
+Every non-asset request is rewritten to \texttt{/index.html}, allowing the React Router bundle to parse the URL path and mount the corresponding view.
+
+\section{Render Container Configuration}
+Render manages the backend Python web service via the root blueprint specification:
+\begin{lstlisting}[language=yaml,caption={Render Service Configuration (\texttt{render.yaml})}]
+services:
+  - type: web
+    name: bengaluru-traffic-ai-backend
+    runtime: python
+    buildCommand: pip install -r requirements-demo.txt
+    startCommand: python backend/app_demo.py
+    envVars:
+      - key: DB_NAME
+        value: bengaluru_traffic
+\end{lstlisting}
+By configuring \texttt{requirements-demo.txt} and \texttt{backend/app\_demo.py}, the service builds and starts in under 45 seconds, requiring less than 85\,MB of RAM and operating well within Render's 512\,MB free limit.
+
+\section{Environment Template and Secret Management}
+Configuration settings are managed through environment variables without hardcoded credentials. Table~\ref{tab:env_vars} catalogs all supported variables documented in \texttt{.env.example}.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{l p{4.2cm} X}
+\toprule
+\textbf{Variable} & \textbf{Default Setting} & \textbf{Operational Function} \\
+\midrule
+\texttt{PORT} & \texttt{5000} & Network port for Flask HTTP server. \\
+\texttt{FLASK\_ENV} & \texttt{development} & Server debug and reload mode flag. \\
+\texttt{MONGO\_URI} & \texttt{mongodb://localhost:27017/} & MongoDB connection string (falls back to console if offline). \\
+\texttt{DB\_NAME} & \texttt{bengaluru\_traffic} & Target database name for violation logs. \\
+\texttt{VITE\_API\_URL} & \texttt{http://localhost:5000} & API base URL used by Vite frontend in production/development. \\
+\texttt{JUNCTION\_NAME} & \texttt{Silk Board, Bengaluru} & Custom junction identity string displayed across UI. \\
+\texttt{JUNCTION\_LAT} & \texttt{12.9176} & Reference latitude for Haversine distance calculations. \\
+\texttt{JUNCTION\_LON} & \texttt{77.6238} & Reference longitude for Haversine distance calculations. \\
+\bottomrule
+\end{tabularx}
+\caption{Environment Configuration Specification (\texttt{.env.example})}
+\label{tab:env_vars}
+\end{table}

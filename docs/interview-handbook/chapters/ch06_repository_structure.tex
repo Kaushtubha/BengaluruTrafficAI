@@ -1,0 +1,80 @@
+\chapter{Repository Structure and Code Navigation}
+
+\section{Annotated Directory Hierarchy}
+The project repository is structured to maintain strict separation between computer vision perception routines, backend micro-services, and client-side presentation components:
+
+\begin{lstlisting}[language=bash,caption={Verified Repository Directory Layout}]
+BengaluruTrafficAI/
+|-- .env.example                     # Environment template (ports, database, junction coords)
+|-- .gitignore                       # Multi-tier exclusion for venv, weights, logs, cache
+|-- README.md                        # Master repository technical documentation
+|-- render.yaml                      # Render Blueprint specification for cloud deployment
+|-- requirements.txt                 # Full AI dependencies (PyTorch, YOLOv8, OpenCV, scikit)
+|-- requirements-demo.txt            # Minimal cloud dependencies (Flask, CORS, dotenv)
+|
+|-- ai/                              # Computer vision & violation detection modules
+|   |-- dataset/
+|   |   `-- sample_traffic.mp4       # Generic urban roadway demonstration footage
+|   |-- db_logger.py                 # Fail-safe MongoDB logging with console fallback
+|   |-- helmet_detector.py           # Motorcycle rider helmet compliance evaluator
+|   |-- snapshot.py                  # Infraction image crop and disk capture
+|   |-- speed_estimator.py           # Monotonic elapsed-time pixel displacement estimator
+|   |-- violation_detector.py        # Stop-line red-light infraction detector
+|   |-- wrong_side_detector.py       # Directional movement vector analyzer
+|   `-- yolo_detection.py            # Standalone YOLO inference demonstration script
+|
+|-- backend/                         # Server application & algorithm services
+|   |-- app.py                       # Local CV backend server (runs YOLO + OpenCV loop)
+|   |-- app_demo.py                  # Hosted demonstration backend server (lightweight simulation)
+|   |-- congestion_predictor.py      # Random Forest classifier with input sanitization
+|   |-- lane_manager.py              # Frame width geometric lane divider
+|   |-- signal_service.py            # Adaptive proportional green-time allocator
+|   `-- tracker_manager.py           # Pure-Python greedy IoU multi-object tracker
+|
+|-- frontend/                        # React Single Page Application (SPA)
+|   |-- package.json                 # Node dependencies and build scripts
+|   |-- vercel.json                  # Vercel SPA route rewrite rules
+|   |-- vite.config.js               # Vite bundling & React plugin configuration
+|   |-- tailwind.config.js           # Theme colors, glow effects, and typography
+|   `-- src/
+|       |-- main.jsx                 # Application entry point
+|       |-- App.jsx                  # Root layout & route configuration
+|       |-- store/
+|       |   `-- useStore.js          # Zustand store for parallel polling & advice state
+|       |-- pages/
+|       |   |-- Dashboard.jsx        # Operations Dashboard with SVG radar & live terminal
+|       |   |-- Analytics.jsx        # Historical charts & lane performance table
+|       |   `-- DriverPortal.jsx     # Commuter corridor assistance & GPS proximity
+|       `-- components/
+|           |-- Layout.jsx           # Responsive shell with theme toggle & status pill
+|           `-- ParticleBackground.jsx # Cyberpunk ambient particle backdrop
+|
+`-- tests/                           # Python automated regression test suite
+    |-- __init__.py                  # Test package initialization
+    |-- test_traffic_intelligence.py # Signal, emergency, RF, speed, and tracking tests
+    `-- test_driver_advice.py        # Demo API schema, coordinate validation, & live CV tests
+\end{lstlisting}
+
+\section{Code Navigation and Call Traceability Table}
+Table~\ref{tab:code_nav} provides a roadmap for tracing data through the codebase during interview preparation.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{3.8cm} p{3.2cm} p{3.2cm} X}
+\toprule
+\textbf{Feature / Operation} & \textbf{Entry Point} & \textbf{Internal Callee} & \textbf{Primary Test Suite} \\
+\midrule
+\textbf{Vehicle Tracking} & \texttt{backend/app.py:135} & \texttt{Tracker.update\_tracks()} & \texttt{TestViolationDeduplication} \\
+\textbf{Stop-Line Violation} & \texttt{backend/app.py:157} & \texttt{check\_red\_light\_violation()} & \texttt{test\_red\_light\_violation...} \\
+\textbf{Speed Calculation} & \texttt{backend/app.py:175} & \texttt{calculate\_speed()} & \texttt{TestSpeedEstimator} \\
+\textbf{Proportional Signal} & \texttt{backend/app.py:227} & \texttt{get\_signal\_plan()} & \texttt{TestSignalService} \\
+\textbf{Congestion Predict} & \texttt{backend/app.py:217} & \texttt{predict\_congestion()} & \texttt{TestCongestionPredictor} \\
+\textbf{Driver Advice API} & \texttt{/api/driver\_advice} & \texttt{\_calculate\_haversine()} & \texttt{TestDriverAdviceDemo} \\
+\textbf{Emergency Override} & \texttt{/api/simulate\_emergency} & \texttt{get\_signal\_plan(..., emergency)} & \texttt{test\_emergency\_override...} \\
+\textbf{Parallel Polling} & \texttt{useStore.js:70} & \texttt{Promise.all()} & Frontend Integration \\
+\bottomrule
+\end{tabularx}
+\caption{Cross-Subsystem Call Traceability Matrix}
+\label{tab:code_nav}
+\end{table}

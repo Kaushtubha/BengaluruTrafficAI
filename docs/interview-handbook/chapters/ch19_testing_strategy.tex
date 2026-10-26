@@ -1,0 +1,65 @@
+\chapter{Testing Strategy}
+
+\section{Testing Philosophy and Tooling}
+BengaluruTrafficAI implements a zero-external-dependency automated regression test suite using Python's standard library \texttt{unittest} module. Tests are completely isolated from proprietary networks and physical database requirements, executing in under 20 seconds.
+
+\subsection{Test Discovery Command}
+\begin{lstlisting}[language=bash]
+# Execute complete regression test suite across both packages
+python -m unittest discover tests -v
+\end{lstlisting}
+\textbf{Current Verified Suite Status}: \textbf{46 passed, 0 failed, 0 errors} in 18.9 seconds.
+
+\section{Test Suite Taxonomy and Coverage}
+Table~\ref{tab:test_taxonomy} breaks down the 46 automated tests across the two primary test packages.
+
+\begin{table}[h!]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{4.5cm} p{2cm} X}
+\toprule
+\textbf{Test Module \& Class} & \textbf{Count} & \textbf{Behaviors Verified} \\
+\midrule
+\texttt{tests.test\_traffic\_intelligence} & & \\
+\quad \texttt{TestSignalService} & 8 tests & Bounded proportional green times ($[10\text{s}, 60\text{s}]$), zero-count base green fallbacks ($20\text{s}$), negative count clamping, and emergency vehicle preemption ($60\text{s}$). \\
+\quad \texttt{TestCongestionPredictor} & 8 tests & Boundary transition sanity ($<15, 15\text{--}34, \ge 35$), input sanitization against NaN/Inf, and provenance label verification. \\
+\quad \texttt{TestSpeedEstimator} & 6 tests & Monotonic timestamp validation, negative interval handling, tracking age resets ($>3\text{s}$), and speed cap bounds ($180\,\text{km/h}$). \\
+\quad \texttt{TestViolationDeduplication} & 3 tests & Persistent track-ID deduplication across Red Light, Wrong Side, and Helmet violation detectors. \\
+\midrule
+\texttt{tests.test\_driver\_advice} & & \\
+\quad \texttt{TestDriverAdviceDemo} & 14 tests & Demonstration API contracts, case-insensitive corridor matching, length limits, Haversine accuracy, and missing coordinate errors. \\
+\quad \texttt{TestDriverAdviceLiveCV} & 5 tests & Live computer vision mode endpoint compatibility and data source identification. \\
+\quad \texttt{TestJunctionEnvironmentConfig} & 2 tests & Configurable junction coordinates sanitization and environment variable out-of-range bounds. \\
+\midrule
+\textbf{Total Test Coverage} & \textbf{46 tests} & \textbf{100\% passing in automated CI/CD environment.} \\
+\bottomrule
+\end{tabularx}
+\caption{Automated Test Suite Taxonomy and Verified Scenarios}
+\label{tab:test_taxonomy}
+\end{table}
+
+\section{Representative Regression Test Excerpts}
+
+\begin{lstlisting}[language=Python,caption={Proportional Signal Timing Bounds Test Excerpt}]
+def test_proportional_allocation_bounds(self):
+    counts = {"North": 30, "South": 10, "East": 5, "West": 5}
+    plan = get_signal_plan(counts)
+    # Busiest lane must receive the priority allocation
+    self.assertEqual(plan["priority_lane"], "North")
+    for lane, seconds in plan["green_times"].items():
+        self.assertGreaterEqual(seconds, MIN_GREEN)
+        self.assertLessEqual(seconds, MAX_GREEN)
+    self.assertEqual(plan["cycle_time"], round(sum(plan["green_times"].values()), 1))
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python,caption={Speed Estimation Gap Reset Test Excerpt}]
+def test_stale_tracking_gap_resets(self):
+    # If a track disappears for > 3 seconds, calculation must reset
+    update_speed(track_id=101, cx=100, cy=100, timestamp=10.0)
+    update_speed(track_id=101, cx=150, cy=150, timestamp=10.1)
+    # Gap of 4.0 seconds (> MAX_TRACK_AGE_SECONDS = 3.0)
+    update_speed(track_id=101, cx=200, cy=200, timestamp=14.1)
+    speed = calculate_speed(track_id=101)
+    # Only 1 observation remains in the new window; returns safe 0.0
+    self.assertEqual(speed, 0.0)
+\end{lstlisting}
