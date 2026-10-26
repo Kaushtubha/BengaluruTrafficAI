@@ -537,7 +537,7 @@ export default function DriverPortal() {
                   <Car size={16} />
                 </div>
                 <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white">
-                  Corridor Congestion
+                  Corridor Congestion (Heuristic Estimate)
                 </h3>
               </div>
               <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${congestionBadge.bg}`}>

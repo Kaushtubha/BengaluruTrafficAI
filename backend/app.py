@@ -56,6 +56,8 @@ traffic_state = {
     "junction": "Silk Board, Bengaluru",
     "active_lane": "North",
     "congestion_level": "Low",
+    "congestion_provenance": "heuristic_rule_estimate",
+    "is_synthetic_congestion_model": True,
 
     "vehicle_counts": {
         "North": 0,
@@ -218,6 +220,8 @@ def run_detection():
             active_lane_count
         )
         traffic_state["congestion_level"] = congestion_level
+        traffic_state["congestion_provenance"] = "heuristic_rule_estimate"
+        traffic_state["is_synthetic_congestion_model"] = True
 
         # 7. Calculate Adaptive Signal Plan with Emergency priorities overrides
         traffic_state["signal_plan"] = get_signal_plan(
@@ -433,7 +437,8 @@ def get_driver_advice():
             "total_junction_vehicles": total_vehicles,
             "assigned_green_time_sec": corridor_green,
             "cycle_time_sec": cycle_time,
-            "congestion_level": congestion_level
+            "congestion_level": congestion_level,
+            "congestion_provenance": "heuristic_rule_estimate"
         },
         "distance_telemetry": {
             "calculation_method": "Haversine Geodesic (Straight-Line)",

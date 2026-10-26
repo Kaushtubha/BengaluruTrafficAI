@@ -6,7 +6,12 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from backend.signal_service import calculate_green_time, get_priority_lane, get_signal_plan, MIN_GREEN, MAX_GREEN, BASE_GREEN
-from backend.congestion_predictor import predict_congestion
+from backend.congestion_predictor import (
+    predict_congestion,
+    get_congestion_details,
+    CONGESTION_PROVENANCE,
+    IS_SYNTHETIC_MODEL,
+)
 from ai.violation_detector import check_red_light_violation, get_violations, STOP_LINE_Y
 from ai.wrong_side_detector import update_track, check_wrong_side, get_wrong_side_violations
 from ai.helmet_detector import check_helmet_violation, get_helmet_violations
@@ -86,15 +91,48 @@ class TestSignalService(unittest.TestCase):
 
 
 class TestCongestionPredictor(unittest.TestCase):
-    """Test Random Forest congestion classification bands."""
+    """Test Random Forest congestion classification bands, boundaries, and transparency."""
 
     def test_low_congestion(self):
         result = predict_congestion(hour=3, total_vehicles=5, active_lane_count=2)
         self.assertEqual(result, "Low")
 
+    def test_low_boundary_transitions(self):
+        self.assertEqual(predict_congestion(hour=12, total_vehicles=0, active_lane_count=0), "Low")
+        self.assertEqual(predict_congestion(hour=12, total_vehicles=14, active_lane_count=5), "Low")
+
+    def test_medium_boundary_transitions(self):
+        self.assertEqual(predict_congestion(hour=12, total_vehicles=15, active_lane_count=6), "Medium")
+        self.assertEqual(predict_congestion(hour=12, total_vehicles=34, active_lane_count=13), "Medium")
+
     def test_high_congestion(self):
         result = predict_congestion(hour=18, total_vehicles=80, active_lane_count=35)
         self.assertEqual(result, "High")
+        self.assertEqual(predict_congestion(hour=12, total_vehicles=35, active_lane_count=14), "High")
+
+    def test_missing_and_none_inputs_handled_safely(self):
+        self.assertEqual(predict_congestion(total_vehicles=None), "UNAVAILABLE")
+        self.assertEqual(predict_congestion(hour=None, total_vehicles=None, active_lane_count=None), "UNAVAILABLE")
+
+    def test_malformed_and_negative_inputs_handled_safely(self):
+        self.assertEqual(predict_congestion(total_vehicles=-5), "UNAVAILABLE")
+        self.assertEqual(predict_congestion(total_vehicles=float("nan")), "UNAVAILABLE")
+        self.assertEqual(predict_congestion(total_vehicles=float("inf")), "UNAVAILABLE")
+        self.assertEqual(predict_congestion(total_vehicles="not_a_number"), "UNAVAILABLE")
+
+    def test_default_optional_parameters_compatible(self):
+        # hour and active_lane_count omitted or None safely default
+        self.assertEqual(predict_congestion(total_vehicles=10), "Low")
+        self.assertEqual(predict_congestion(total_vehicles=25), "Medium")
+        self.assertEqual(predict_congestion(total_vehicles=50), "High")
+
+    def test_provenance_and_synthetic_identification(self):
+        details = get_congestion_details(total_vehicles=20)
+        self.assertEqual(details["congestion_level"], "Medium")
+        self.assertEqual(details["provenance"], CONGESTION_PROVENANCE)
+        self.assertTrue(details["is_synthetic_model"])
+        self.assertIn("synthetic", details["disclaimer"].lower())
+        self.assertIsNone(details["confidence"])
 
 
 class TestViolationDeduplication(unittest.TestCase):

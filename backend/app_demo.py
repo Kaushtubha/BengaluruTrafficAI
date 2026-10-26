@@ -49,11 +49,19 @@ def _generate_lane_counts():
     return base
 
 def _get_congestion(total):
-    if total < 20:
-        return "Low"
-    elif total < 45:
-        return "Medium"
-    return "High"
+    if total is None:
+        return "UNAVAILABLE"
+    try:
+        tot = float(total)
+        if tot < 0 or math.isnan(tot) or math.isinf(tot):
+            return "UNAVAILABLE"
+        if tot < 20:
+            return "Low"
+        elif tot < 45:
+            return "Medium"
+        return "High"
+    except (ValueError, TypeError):
+        return "UNAVAILABLE"
 
 def _get_signal_plan(lane_counts, emergency_lane=None):
     counts = lane_counts if isinstance(lane_counts, dict) and lane_counts else {l: 0 for l in LANES}
@@ -110,6 +118,8 @@ def get_status():
         "junction": JUNCTIONS,
         "active_lane": active_lane,
         "congestion_level": congestion,
+        "congestion_provenance": "synthetic_demo_rule",
+        "is_synthetic_congestion_model": True,
         "vehicle_counts": lane_counts,
         "total_vehicles": total,
         "tracked_vehicles": _tracked_total,
@@ -276,7 +286,8 @@ def get_driver_advice():
             "total_junction_vehicles": total,
             "assigned_green_time_sec": corridor_green,
             "cycle_time_sec": cycle_time,
-            "congestion_level": congestion
+            "congestion_level": congestion,
+            "congestion_provenance": "synthetic_demo_rule"
         },
         "distance_telemetry": {
             "calculation_method": "Haversine Geodesic (Straight-Line)",

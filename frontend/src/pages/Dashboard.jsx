@@ -222,7 +222,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <Zap size={14} className={`shrink-0 ${ trafficData.congestion_level === 'High' ? 'text-red-400' : trafficData.congestion_level === 'Medium' ? 'text-amber-400' : 'text-emerald-400' }`} />
           <div>
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">RF Congestion Model</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Congestion (Heuristic RF)</p>
             <p className={`text-sm font-bold font-mono ${ trafficData.congestion_level === 'High' ? 'text-red-400' : trafficData.congestion_level === 'Medium' ? 'text-amber-400' : 'text-emerald-400' }`}>
               {trafficData.congestion_level || 'Loading...'}
             </p>
@@ -547,7 +547,7 @@ export default function Dashboard() {
             </svg>
             <div className="absolute bottom-2 left-2 right-2 flex justify-between text-[8px] font-mono text-slate-500">
               <span>LATENCY: ~30ms</span>
-              <span>RF STATE: {trafficData.congestion_level}</span>
+              <span>ESTIMATE: {trafficData.congestion_level}</span>
             </div>
           </div>
           <div className="w-full text-center mt-3 text-xs text-slate-400">
