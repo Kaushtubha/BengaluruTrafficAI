@@ -43,6 +43,10 @@ class Tracker:
             iou_threshold (float): Minimum IoU to consider a detection
                 as a match for an existing track.
         """
+        if max_lost < 0:
+            raise ValueError("max_lost must be non-negative")
+        if not (0.0 <= iou_threshold <= 1.0):
+            raise ValueError("iou_threshold must be between 0.0 and 1.0")
         self.max_lost = max_lost
         self.iou_threshold = iou_threshold
         self.next_id = 1
@@ -60,11 +64,13 @@ class Tracker:
         Returns:
             list[Track]: All currently active tracks.
         """
-        # Convert detections from [x, y, w, h] → [x1, y1, x2, y2]
+        # Convert valid detections from [x, y, w, h] → [x1, y1, x2, y2]
         det_bboxes = []
         det_labels = []
-        for bbox_xywh, conf, label in detections:
+        for bbox_xywh, conf, label in (detections or []):
             x, y, w, h = bbox_xywh
+            if w <= 0 or h <= 0:
+                continue
             det_bboxes.append([x, y, x + w, y + h])
             det_labels.append(label)
 
@@ -106,6 +112,11 @@ class Tracker:
         self.tracks = updated_tracks
         return self.tracks
 
+    @staticmethod
+    def _box_area(box: list) -> float:
+        """Compute non-negative area for a [x1, y1, x2, y2] bounding box."""
+        return max(0.0, float(box[2]) - float(box[0])) * max(0.0, float(box[3]) - float(box[1]))
+
     def calculate_iou(self, boxA: list, boxB: list) -> float:
         """
         Compute Intersection over Union (IoU) for two bounding boxes.
@@ -122,13 +133,15 @@ class Tracker:
         x_right  = min(boxA[2], boxB[2])
         y_bottom = min(boxA[3], boxB[3])
 
-        inter_area = max(0, x_right - x_left) * max(0, y_bottom - y_top)
+        inter_area = max(0.0, float(x_right) - float(x_left)) * max(0.0, float(y_bottom) - float(y_top))
+        if inter_area == 0.0:
+            return 0.0
 
-        area_a = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
-        area_b = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
-        union_area = float(area_a + area_b - inter_area)
+        area_a = self._box_area(boxA)
+        area_b = self._box_area(boxB)
+        union_area = area_a + area_b - inter_area
 
-        if union_area == 0:
+        if union_area <= 0.0:
             return 0.0
         return inter_area / union_area
 
