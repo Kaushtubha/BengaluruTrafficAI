@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Navigation, MapPin, Compass, AlertCircle, CheckCircle2,
   Clock, ShieldAlert, RefreshCw, Car, Info, ShieldCheck,
-  AlertTriangle, ArrowRight, CornerDownRight, Radio, ExternalLink
+  AlertTriangle, ArrowRight, CornerDownRight, Radio, ExternalLink,
+  Share2, Droplets, SunMedium, Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -43,6 +44,21 @@ export default function DriverPortal() {
   const [gpsDetecting, setGpsDetecting] = useState(false);
   const [gpsError, setGpsError] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const [weatherCondition, setWeatherCondition] = useState('dry');
+
+  const handleShareAdvice = () => {
+    const text = [
+      `🚦 BLR TrafficAI Commuter Advisory`,
+      `Junction: ${junctionInfo.name || 'Silk Board, Bengaluru'}`,
+      `Selected Corridor: ${selectedCorridor} Corridor (${approachInfo.congestion_level || 'Normal'} congestion)`,
+      `Straight-Line Distance: ${distanceTelemetry.straight_line_distance_km != null ? distanceTelemetry.straight_line_distance_km + ' km' : 'Coordinates not set'}`,
+      `Allocated Green Phase: ${approachInfo.assigned_green_time_sec || 28.3}s`,
+      `Surface Condition: ${weatherCondition === 'rain' ? 'Wet (Monsoon advisory active)' : 'Dry'}`,
+      `Live Portal: https://bengaluru-traffic-ai.vercel.app/driver`
+    ].join('\n');
+    navigator.clipboard?.writeText(text);
+    toast.success('Commuter advisory copied to clipboard!');
+  };
 
   const handleFetch = useCallback(() => {
     fetchDriverAdvice(selectedCorridor, userCoords?.lat, userCoords?.lon);
@@ -161,6 +177,36 @@ export default function DriverPortal() {
 
         {/* Controls */}
         <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+          {/* Weather condition toggle */}
+          <button
+            onClick={() => {
+              const next = weatherCondition === 'dry' ? 'rain' : 'dry';
+              setWeatherCondition(next);
+              toast(next === 'rain' ? 'Monsoon Wet Road advisory enabled' : 'Dry Pavement conditions restored', {
+                icon: next === 'rain' ? '🌧️' : '☀️',
+              });
+            }}
+            aria-label="Toggle monsoon weather simulation"
+            className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all shadow-xs ${
+              weatherCondition === 'rain'
+                ? 'bg-sky-500/15 border-sky-500/30 text-sky-400'
+                : 'bg-slate-100 dark:bg-dark-800 border-slate-200 dark:border-dark-700 text-slate-500 dark:text-dark-400 hover:text-amber-500'
+            }`}
+          >
+            {weatherCondition === 'rain' ? <Droplets size={14} className="text-sky-400 animate-bounce" /> : <SunMedium size={14} />}
+            {weatherCondition === 'rain' ? 'Monsoon Rain' : 'Dry Surface'}
+          </button>
+
+          {/* Share advice */}
+          <button
+            onClick={handleShareAdvice}
+            aria-label="Share commuter advisory to clipboard"
+            className="px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 bg-white dark:bg-dark-800 text-slate-700 dark:text-dark-200 hover:text-amber-500 hover:border-amber-500/30 transition-all flex items-center gap-1.5 shadow-xs"
+          >
+            <Share2 size={13} className="text-amber-500" />
+            Share
+          </button>
+
           <button
             onClick={() => setAutoRefresh(v => !v)}
             aria-label="Toggle automated live synchronization (refreshes every 4 seconds)"
@@ -260,6 +306,32 @@ export default function DriverPortal() {
           </div>
         </div>
       </motion.div>
+
+      {/* ── Monsoon Weather Condition Advisory ──────────────────── */}
+      <AnimatePresence>
+        {weatherCondition === 'rain' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -6 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -6 }}
+            role="status"
+            className="p-4 rounded-2xl bg-sky-500/10 border border-sky-500/25 text-sky-200 flex items-start gap-3.5"
+          >
+            <Droplets size={20} className="text-sky-400 shrink-0 mt-0.5" />
+            <div className="flex-1 text-xs">
+              <span className="font-bold text-sky-300 uppercase tracking-wide block">
+                🌧️ Monsoon Wet Pavement Advisory Active
+              </span>
+              <p className="text-sky-100/80 mt-0.5 leading-relaxed">
+                Tire-to-asphalt braking friction is diminished by ~40% under wet monsoon conditions. Extend following headway to at least 3 vehicle lengths and exercise extra vigilance on the Silk Board flyover descent ramps.
+              </p>
+            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0">
+              +40% Braking Dist
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Emergency Vehicle Active Alert ─────────────────────── */}
       <AnimatePresence>
@@ -445,6 +517,41 @@ export default function DriverPortal() {
                 {distanceTelemetry.disclaimer ||
                   'Straight-line aerial distance only. Actual road driving distance will be longer due to road topology and flyover ramps.'}
               </p>
+
+              {/* Corridor Compass & ETA Dial */}
+              <div className="pt-3 mt-3 border-t border-slate-200/60 dark:border-dark-700/60 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full border-2 border-amber-500/30 flex items-center justify-center relative bg-slate-900/40 shrink-0">
+                    <svg viewBox="0 0 100 100" className="w-full h-full p-1">
+                      <circle cx="50" cy="50" r="44" fill="none" stroke="#64748b" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                      <text x="50" y="16" textAnchor="middle" fill="#f59e0b" fontSize="10" fontWeight="bold">N</text>
+                      <text x="88" y="54" textAnchor="middle" fill="#64748b" fontSize="8" fontWeight="bold">E</text>
+                      <text x="50" y="92" textAnchor="middle" fill="#64748b" fontSize="8" fontWeight="bold">S</text>
+                      <text x="12" y="54" textAnchor="middle" fill="#64748b" fontSize="8" fontWeight="bold">W</text>
+                      <g transform={`rotate(${selectedCorridor === 'North' ? 0 : selectedCorridor === 'East' ? 90 : selectedCorridor === 'South' ? 180 : 270} 50 50)`}>
+                        <polygon points="50,22 45,50 55,50" fill="#ef4444" />
+                        <polygon points="50,78 45,50 55,50" fill="#94a3b8" />
+                      </g>
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Approach Bearing</span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100 font-mono">
+                      {selectedCorridor === 'North' ? '0° Northbound' : selectedCorridor === 'East' ? '90° Eastbound' : selectedCorridor === 'South' ? '180° Southbound' : '270° Westbound'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs">
+                  <Clock size={14} className="text-amber-500 shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-mono">Estimated Aerial Transit</span>
+                    <strong className="text-amber-600 dark:text-amber-400 font-mono">
+                      ~{Math.max(2, Math.round((distanceTelemetry.straight_line_distance_km || 2) * 2.5))} mins
+                    </strong>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-xs text-slate-500 dark:text-dark-400 flex items-start gap-2">
