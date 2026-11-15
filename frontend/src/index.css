@@ -344,3 +344,27 @@ html:not(.dark) .recharts-text { fill: #64748b !important; }
 html:not(.dark) ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
 html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.5); }
 
+/* ─── WCAG 2.1 AA Accessibility & Motion Safety ────────────── */
+:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+

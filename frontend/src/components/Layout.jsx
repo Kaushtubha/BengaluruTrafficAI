@@ -314,7 +314,7 @@ export default function Layout({ children }) {
       </AnimatePresence>
 
       {/* ── Main content ───────────────────────────────────────── */}
-      <main className="flex-1 md:pl-64 pt-14 md:pt-0 min-h-screen flex flex-col z-10 relative">
+      <main className="flex-1 md:pl-64 pt-14 md:pt-0 pb-20 md:pb-0 min-h-screen flex flex-col z-10 relative">
         <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-7 md:py-9">
           {/* Live Incident Alert Ticker */}
           <IncidentTicker />
@@ -333,6 +333,45 @@ export default function Layout({ children }) {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* ── Floating Mobile Bottom Navigation Dock ────────────── */}
+      <nav aria-label="Mobile Bottom Navigation" className="md:hidden fixed bottom-3 inset-x-3 z-30 flex items-center justify-around p-1.5 rounded-2xl bg-white/90 dark:bg-[#0f1523]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-2xl">
+        {NAV.map(({ name, path, icon: Icon }) => {
+          const active = location.pathname === path;
+          return (
+            <Link
+              key={path}
+              to={path}
+              aria-label={name}
+              className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all relative ${
+                active
+                  ? 'text-amber-500 font-bold'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
+            >
+              {active && (
+                <motion.div
+                  layoutId="mobile-dock-active"
+                  className="absolute inset-0 rounded-xl bg-amber-500/10 border border-amber-500/20"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
+              <Icon size={18} className="relative z-10" />
+              <span className="text-[10px] mt-0.5 relative z-10 truncate max-w-[68px]">
+                {name === 'Junction Dashboard' ? 'Radar' : name === 'Driver Portal' ? 'Driver' : name}
+              </span>
+            </Link>
+          );
+        })}
+        <button
+          onClick={() => setPaletteOpen(true)}
+          aria-label="Quick Actions Command Palette"
+          className="flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl text-slate-400 hover:text-amber-500 transition-all"
+        >
+          <Search size={18} />
+          <span className="text-[10px] mt-0.5 truncate">Actions</span>
+        </button>
+      </nav>
 
       {/* ── Quick Action Command Palette (Cmd+K / Ctrl+K) ───── */}
       <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
