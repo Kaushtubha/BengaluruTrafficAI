@@ -74,13 +74,18 @@ Urban intersections frequently experience severe throughput collapse due to rigi
 ## ✨ Key Features
 
 ### 🚦 Operations Dashboard (`/`)
-* **Real-Time Junction Radar**: Interactive SVG canvas displaying live vehicle distribution across North, South, East, and West approach lanes with animated transit pulses.
+* **Real-Time Junction Flow Radar**: Interactive SVG canvas displaying live vehicle distribution across North, South, East, and West approach corridors with animated transit pulses, lane focus filters, and concentric sonar sweeps.
 * **Proportional Signal Coordination**: Dynamic signal cycle optimizer calculating green times bounded between 10s and 60s based on relative queue weights.
 * **Emergency Preemption Controls**: Interactive simulation trigger that preempts normal phase sequences and allocates maximum green clearance (60s) to emergency vehicles (ambulances, fire engines).
+* **Live Incident Alert Ticker**: Persistent real-time violation notification feed with 1-click incident inspection modal and dispatcher action workflow.
+* **Web Audio Telemetry Synthesizer**: Pure oscillator-based acoustic radar sonar pings, violation attention chimes, and emergency priority double-tone alerts with audio mute toggle.
+* **Quick Action Command Palette (`Ctrl+K` / `⌘K`)**: Instant keyboard navigation, priority override preemption, theme toggling, and telemetry reporting.
 * **Live KPI Strip**: Instant visibility into active junction identity, heuristic congestion classification, all-time tracked count, and cycle duration.
 * **Real-Time Violation Feed**: Streaming event log capturing red-light infractions, speeding incidents, wrong-side approaches, and helmet compliance checks.
 
 ### 📈 Traffic Analytics Engine (`/analytics`)
+* **Telemetry Data Export**: 1-click CSV and JSON data export for academic research, traffic authority reporting, and external audit logs.
+* **Executive Safety Compliance Index**: High-level KPIs tracking safety compliance rate, violation rate per 100 vehicles, peak ingress corridor, and active cycle efficiency.
 * **Historical Trend Charts**: Multi-snapshot stacked bar charts displaying cumulative violation trends over live intervals.
 * **Violation Breakdown Analysis**: Recharts donut visualization tracking proportional distribution across all 4 infraction categories.
 * **Lane Load Radar Distribution**: Directional radar visualization contrasting relative volume stress across all four corridors.
@@ -88,7 +93,9 @@ Urban intersections frequently experience severe throughput collapse due to rigi
 
 ### 🧭 Driver Assistance Portal (`/driver`)
 * **Corridor-Specific Advisory**: Commuter selection across North (Hosur Rd), South (Electronic City Flyover), East (HSR Layout / Bellandur), and West (BTM Layout) corridors.
-* **Signal Phase Telemetry**: Direct visibility into allocated green intervals, active phase recommendations, and queue status.
+* **Corridor Compass & ETA Estimator**: Real-time approach bearing dial (0° N, 90° E, 180° S, 270° W) with straight-line aerial transit time projection.
+* **Monsoon Wet Road Advisory**: Toggleable rainy weather condition simulator with wet pavement friction warning and +40% braking distance safety guidelines for Bengaluru flyover descent ramps.
+* **One-Click Advisory Sharing**: Instant clipboard export of structured commuter advice with junction distance and assigned green phase.
 * **Straight-Line Proximity Telemetry**: Browser Geolocation integration with automated coordinate validation and Haversine geodesic distance calculation.
 * **Reference Landmark Presets**: Approximate distance calculation from major transit nodes (Electronic City Toll, Koramangala Sony World, HSR Sector 1, BTM Water Tank).
 * **Transparent Delay Disclosures**: Explicit labeling of queue delays as `ESTIMATE_UNAVAILABLE` due to camera field-of-view physical limitations.
