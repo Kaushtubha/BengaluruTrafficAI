@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import { audioTelemetry } from '../utils/audioTelemetry';
 
 // Self-sensing API URL resolver — uses VITE_API_URL in production
 const API_BASE_URL = import.meta.env.VITE_API_URL
@@ -26,6 +27,14 @@ export const useStore = create((set, get) => ({
   toggleTheme: () => {
     const nextTheme = get().theme === 'light' ? 'dark' : 'light';
     get().setTheme(nextTheme);
+  },
+
+  // Audio Telemetry State
+  audioEnabled: audioTelemetry.isEnabled(),
+  toggleAudio: () => {
+    const next = audioTelemetry.toggle();
+    set({ audioEnabled: next });
+    return next;
   },
 
   // Traffic State
@@ -77,6 +86,12 @@ export const useStore = create((set, get) => ({
       const trafficData = statusRes.data;
       const signalData = signalRes.data;
       const violationsData = violationsRes.data;
+
+      // Play alert chime if violation count incremented
+      const prevViolations = get().violationsData?.total_violations || 0;
+      if (violationsData?.total_violations > prevViolations) {
+        audioTelemetry.playViolationAlert();
+      }
 
       // Update history stream (max 20 entries)
       const now = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -138,6 +153,9 @@ export const useStore = create((set, get) => ({
   // Trigger simulated emergency vehicle in the backend
   simulateEmergency: async (lane) => {
     try {
+      if (lane) {
+        audioTelemetry.playEmergencyChime();
+      }
       await api.post('/simulate_emergency', { lane });
       get().fetchTrafficData();
     } catch (err) {

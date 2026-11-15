@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
   LayoutDashboard, Sun, Moon, Menu, X, Radar, ChevronRight, BarChart2,
-  Navigation, Command, Search
+  Navigation, Command, Search, Volume2, VolumeX
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ParticleBackground from './ParticleBackground';
@@ -16,7 +16,7 @@ const NAV = [
 ];
 
 export default function Layout({ children }) {
-  const { theme, toggleTheme, systemStatus } = useStore();
+  const { theme, toggleTheme, systemStatus, audioEnabled, toggleAudio } = useStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
@@ -166,12 +166,13 @@ export default function Layout({ children }) {
           </div>
 
           {/* Theme toggle */}
-          <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl
+          <div className="flex items-center justify-between px-3.5 py-2 rounded-xl
             bg-slate-100/60 dark:bg-dark-800/50 border border-slate-200/50 dark:border-dark-700/40">
             <span className="text-xs font-semibold text-slate-500 dark:text-dark-400">Appearance</span>
             <motion.button
               whileHover={{ scale: 1.08, rotate: 8 }} whileTap={{ scale: 0.92, rotate: -8 }}
               onClick={toggleTheme}
+              aria-label="Toggle theme appearance"
               className="p-1.5 rounded-lg bg-white dark:bg-dark-700 border border-slate-200/70 dark:border-dark-600/60
                 text-amber-500 shadow-sm hover:shadow-glow-sm transition-all"
             >
@@ -184,6 +185,34 @@ export default function Layout({ children }) {
                   {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
                 </motion.div>
               </AnimatePresence>
+            </motion.button>
+          </div>
+
+          {/* Audio Telemetry toggle */}
+          <div className="flex items-center justify-between px-3.5 py-2 rounded-xl
+            bg-slate-100/60 dark:bg-dark-800/50 border border-slate-200/50 dark:border-dark-700/40">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-500 dark:text-dark-400">Audio NOC</span>
+              <span className={`text-[9px] font-mono px-1 rounded ${audioEnabled ? 'text-emerald-500 bg-emerald-500/10' : 'text-slate-400 bg-slate-200 dark:bg-white/5'}`}>
+                {audioEnabled ? 'ON' : 'MUTED'}
+              </span>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+              onClick={() => {
+                const next = toggleAudio();
+                toast(next ? 'Audio Telemetry active (sonar & violation pings)' : 'Audio Telemetry muted', {
+                  icon: next ? '🔊' : '🔇',
+                });
+              }}
+              aria-label="Toggle audio telemetry"
+              className={`p-1.5 rounded-lg border transition-all ${
+                audioEnabled
+                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500 shadow-sm'
+                  : 'bg-white dark:bg-dark-700 border-slate-200/70 dark:border-dark-600/60 text-slate-400'
+              }`}
+            >
+              {audioEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
             </motion.button>
           </div>
         </div>
