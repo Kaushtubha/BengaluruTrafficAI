@@ -3,10 +3,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
   LayoutDashboard, Sun, Moon, Menu, X, Radar, ChevronRight, BarChart2,
-  Navigation,
+  Navigation, Command, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ParticleBackground from './ParticleBackground';
+import CommandPalette from './CommandPalette';
 
 const NAV = [
   { name: 'Junction Dashboard', path: '/', icon: LayoutDashboard, sub: 'Junction flow & timings' },
@@ -17,6 +18,7 @@ const NAV = [
 export default function Layout({ children }) {
   const { theme, toggleTheme, systemStatus } = useStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -25,6 +27,21 @@ export default function Layout({ children }) {
   }, [theme]);
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+
+  // Global keyboard shortcut: Cmd+K / Ctrl+K or ?
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(prev => !prev);
+      } else if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="min-h-screen flex text-slate-900 dark:text-slate-200 font-sans relative overflow-hidden bg-gradient-to-br from-[#f4f7fb] via-[#ffffff] to-[#fff5f0] dark:from-[#080b14] dark:via-[#0c111c] dark:to-[#1a0f0a] transition-colors duration-500">
@@ -55,8 +72,24 @@ export default function Layout({ children }) {
           </div>
         </div>
 
+        {/* Quick Actions Search Bar Button */}
+        <div className="px-4 pt-4 pb-1">
+          <button
+            onClick={() => setPaletteOpen(true)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-100/70 dark:bg-dark-800/60 border border-slate-200/60 dark:border-white/[0.06] text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:border-amber-500/30 transition-all group"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <Search size={14} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
+              Quick Actions
+            </span>
+            <kbd className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-white dark:bg-white/10 text-slate-400 border border-slate-200 dark:border-white/10 shadow-xs">
+              Ctrl+K
+            </kbd>
+          </button>
+        </div>
+
         {/* Nav label */}
-        <div className="px-5 pt-6 pb-2">
+        <div className="px-5 pt-4 pb-2">
           <span className="text-[10px] font-semibold tracking-[0.15em] text-slate-400/70 dark:text-dark-600 uppercase">Control Panel</span>
         </div>
 
@@ -173,11 +206,18 @@ export default function Layout({ children }) {
           <span className="font-display font-bold text-base text-slate-900 dark:text-white">BLR TrafficAI</span>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setPaletteOpen(true)}
+            aria-label="Search actions"
+            className="p-2 rounded-lg text-slate-500 dark:text-dark-400 hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors">
+            <Search size={17} />
+          </button>
           <button onClick={toggleTheme}
+            aria-label="Toggle theme"
             className="p-2 rounded-lg text-slate-500 dark:text-dark-400 hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors">
             {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>
           <button onClick={() => setMobileOpen(v => !v)}
+            aria-label="Toggle navigation menu"
             className="p-2 rounded-lg text-slate-600 dark:text-dark-300 hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors">
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -260,6 +300,9 @@ export default function Layout({ children }) {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* ── Quick Action Command Palette (Cmd+K / Ctrl+K) ───── */}
+      <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }
