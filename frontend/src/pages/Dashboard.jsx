@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { motion, useSpring } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { audioTelemetry } from '../utils/audioTelemetry';
 
 /* ─── Animated number ───────────────────── */
 function AnimatedCounter({ value, prefix = '', suffix = '' }) {
@@ -60,6 +61,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [time, setTime] = useState(new Date());
   const [activeOverride, setActiveOverride] = useState(null);
+  const [selectedRadarLane, setSelectedRadarLane] = useState('All');
 
   // Dynamic violation logs state
   const [violationLogs, setViolationLogs] = useState([
@@ -463,24 +465,99 @@ export default function Dashboard() {
         {/* Column 2: Interactive Junction Visualizer (Dynamic SVG Map) */}
         <motion.div 
           variants={rise}
-          className="glass-panel rounded-2xl p-6 border border-white/[0.05] flex flex-col items-center justify-between"
+          className="glass-panel rounded-2xl p-6 border border-white/[0.05] flex flex-col justify-between"
         >
-          <div className="w-full mb-3 flex items-center justify-between">
-            <h3 className="font-display font-bold text-slate-200 text-sm uppercase tracking-widest">
-              🗺️ Junction Radar Visualizer
-            </h3>
-            <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
-              Live Simulation
-            </span>
+          <div className="w-full mb-3 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h3 className="font-display font-bold text-slate-200 text-sm uppercase tracking-widest flex items-center gap-1.5">
+                <Radar size={15} className="text-amber-400" />
+                Junction Flow Radar
+              </h3>
+              <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                Interactive Approach Radar · Silk Board
+              </p>
+            </div>
+            
+            {/* Lane Focus Filters */}
+            <div className="flex items-center gap-1 bg-slate-900/80 p-0.5 rounded-lg border border-white/[0.06]">
+              {['All', 'North', 'South', 'East', 'West'].map((lane) => (
+                <button
+                  key={lane}
+                  onClick={() => {
+                    setSelectedRadarLane(lane);
+                    audioTelemetry.playSonarPing(lane === 'All' ? 520 : 680);
+                  }}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold transition-all ${
+                    selectedRadarLane === lane
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  {lane === 'All' ? 'ALL' : lane[0]}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="relative w-full h-full min-h-[260px] bg-slate-950/80 rounded-xl overflow-hidden border border-white/[0.05] flex items-center justify-center">
+          <div className="relative w-full min-h-[280px] bg-slate-950/90 rounded-xl overflow-hidden border border-white/[0.05] flex items-center justify-center">
             {/* SVG Intersection Map */}
-            <svg viewBox="0 0 200 200" className="w-full h-full p-2">
+            <svg viewBox="0 0 200 200" className="w-full h-full p-2 select-none">
+              <defs>
+                <radialGradient id="radarSweep" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
+                  <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.08" />
+                  <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+                </radialGradient>
+                <linearGradient id="corridorGlowNorth" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                </linearGradient>
+                <linearGradient id="corridorGlowSouth" x1="0%" y1="100%" x2="0%" y2="0%">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.05" />
+                </linearGradient>
+                <linearGradient id="corridorGlowEast" x1="100%" y1="0%" x2="0%" y2="0%">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                </linearGradient>
+                <linearGradient id="corridorGlowWest" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#ec4899" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#ec4899" stopOpacity="0.05" />
+                </linearGradient>
+              </defs>
+
+              {/* Sonar Radar Concentric Rings */}
+              <circle cx="100" cy="100" r="30" fill="none" stroke="#334155" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.6" />
+              <circle cx="100" cy="100" r="60" fill="none" stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" opacity="0.4" />
+              <circle cx="100" cy="100" r="88" fill="none" stroke="#334155" strokeWidth="0.5" strokeDasharray="4 4" opacity="0.3" />
+
+              {/* Dynamic Radar Sweep Animation */}
+              <motion.circle
+                cx="100" cy="100" r="85"
+                fill="url(#radarSweep)"
+                initial={{ scale: 0.2, opacity: 0.8 }}
+                animate={{ scale: [0.2, 1], opacity: [0.8, 0] }}
+                transition={{ repeat: Infinity, duration: 3.2, ease: "easeOut" }}
+              />
+
               {/* Intersection background roads */}
-              <rect x="85" y="0" width="30" height="200" fill="#1e293b" opacity="0.6" />
-              <rect x="0" y="85" width="200" height="30" fill="#1e293b" opacity="0.6" />
-              
+              <rect x="85" y="0" width="30" height="200" fill="#1e293b" opacity="0.7" />
+              <rect x="0" y="85" width="200" height="30" fill="#1e293b" opacity="0.7" />
+
+              {/* Selected Lane Approach Highlight Glow */}
+              {(selectedRadarLane === 'All' || selectedRadarLane === 'North') && (
+                <rect x="85" y="0" width="30" height="85" fill="url(#corridorGlowNorth)" />
+              )}
+              {(selectedRadarLane === 'All' || selectedRadarLane === 'South') && (
+                <rect x="85" y="115" width="30" height="85" fill="url(#corridorGlowSouth)" />
+              )}
+              {(selectedRadarLane === 'All' || selectedRadarLane === 'East') && (
+                <rect x="115" y="85" width="85" height="30" fill="url(#corridorGlowEast)" />
+              )}
+              {(selectedRadarLane === 'All' || selectedRadarLane === 'West') && (
+                <rect x="0" y="85" width="85" height="30" fill="url(#corridorGlowWest)" />
+              )}
+
               {/* Lane dividers */}
               <line x1="100" y1="0" x2="100" y2="200" stroke="#475569" strokeDasharray="3 3" />
               <line x1="0" y1="100" x2="200" y2="100" stroke="#475569" strokeDasharray="3 3" />
@@ -491,67 +568,103 @@ export default function Dashboard() {
               <line x1="70" y1="85" x2="70" y2="115" stroke="#94a3b8" strokeWidth="2" strokeDasharray="2 1" />
               <line x1="130" y1="85" x2="130" y2="115" stroke="#94a3b8" strokeWidth="2" strokeDasharray="2 1" />
 
-              {/* Dynamic traffic lights */}
+              {/* Dynamic traffic lights with pulse */}
               {/* North Signal */}
-              <circle cx="75" cy="65" r="4" fill={trafficData.active_lane === "North" ? "#10b981" : "#ef4444"} className={trafficData.active_lane === "North" ? "animate-pulse" : ""} />
+              <circle cx="75" cy="65" r="4.5" fill={trafficData.active_lane === "North" ? "#10b981" : "#ef4444"} />
+              {trafficData.active_lane === "North" && (
+                <circle cx="75" cy="65" r="7" fill="none" stroke="#10b981" strokeWidth="1" className="animate-ping" opacity="0.6" />
+              )}
               {/* South Signal */}
-              <circle cx="125" cy="135" r="4" fill={trafficData.active_lane === "South" ? "#10b981" : "#ef4444"} className={trafficData.active_lane === "South" ? "animate-pulse" : ""} />
+              <circle cx="125" cy="135" r="4.5" fill={trafficData.active_lane === "South" ? "#10b981" : "#ef4444"} />
+              {trafficData.active_lane === "South" && (
+                <circle cx="125" cy="135" r="7" fill="none" stroke="#10b981" strokeWidth="1" className="animate-ping" opacity="0.6" />
+              )}
               {/* East Signal */}
-              <circle cx="135" cy="75" r="4" fill={trafficData.active_lane === "East" ? "#10b981" : "#ef4444"} className={trafficData.active_lane === "East" ? "animate-pulse" : ""} />
+              <circle cx="135" cy="75" r="4.5" fill={trafficData.active_lane === "East" ? "#10b981" : "#ef4444"} />
+              {trafficData.active_lane === "East" && (
+                <circle cx="135" cy="75" r="7" fill="none" stroke="#10b981" strokeWidth="1" className="animate-ping" opacity="0.6" />
+              )}
               {/* West Signal */}
-              <circle cx="65" cy="125" r="4" fill={trafficData.active_lane === "West" ? "#10b981" : "#ef4444"} className={trafficData.active_lane === "West" ? "animate-pulse" : ""} />
+              <circle cx="65" cy="125" r="4.5" fill={trafficData.active_lane === "West" ? "#10b981" : "#ef4444"} />
+              {trafficData.active_lane === "West" && (
+                <circle cx="65" cy="125" r="7" fill="none" stroke="#10b981" strokeWidth="1" className="animate-ping" opacity="0.6" />
+              )}
 
               {/* Junction center glow */}
-              <circle cx="100" cy="100" r="12" fill={trafficData.active_lane ? "rgba(249, 115, 22, 0.1)" : "rgba(255,255,255,0.02)"} stroke={trafficData.active_lane ? "#f97316" : "#475569"} strokeWidth="1" />
-              <text x="100" y="102" textAnchor="middle" fill="#f97316" fontSize="6" fontWeight="bold" fontFamily="monospace">
+              <circle cx="100" cy="100" r="14" fill={trafficData.active_lane ? "rgba(249, 115, 22, 0.15)" : "rgba(255,255,255,0.03)"} stroke={trafficData.active_lane ? "#f97316" : "#475569"} strokeWidth="1" />
+              <text x="100" y="103" textAnchor="middle" fill="#f97316" fontSize="7" fontWeight="bold" fontFamily="monospace">
                 {trafficData.active_lane ? trafficData.active_lane[0] : "--"}
               </text>
 
-              {/* Animated dots representing traffic flowing */}
-              {/* North Lane vehicles flowing downward */}
-              {vehicleCounts.North > 0 && (
+              {/* Animated dots representing traffic flow with speed proportional to queue */}
+              {vehicleCounts.North > 0 && (selectedRadarLane === 'All' || selectedRadarLane === 'North') && (
                 <motion.circle
-                  cx="92" r="2.5" fill="#f59e0b"
+                  cx="92" r="2.8" fill="#f59e0b"
                   initial={{ cy: 10 }}
                   animate={{ cy: [10, 85, 115, 190] }}
-                  transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.North * 0.25), ease: "linear" }}
+                  transition={{ repeat: Infinity, duration: Math.max(1.0, 4.0 - vehicleCounts.North * 0.15), ease: "linear" }}
                 />
               )}
-              {/* South Lane vehicles flowing upward */}
-              {vehicleCounts.South > 0 && (
+              {vehicleCounts.South > 0 && (selectedRadarLane === 'All' || selectedRadarLane === 'South') && (
                 <motion.circle
-                  cx="108" r="2.5" fill="#3b82f6"
+                  cx="108" r="2.8" fill="#3b82f6"
                   initial={{ cy: 190 }}
                   animate={{ cy: [190, 115, 85, 10] }}
-                  transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.South * 0.25), ease: "linear" }}
+                  transition={{ repeat: Infinity, duration: Math.max(1.0, 4.0 - vehicleCounts.South * 0.15), ease: "linear" }}
                 />
               )}
-              {/* East Lane vehicles flowing westward */}
-              {vehicleCounts.East > 0 && (
+              {vehicleCounts.East > 0 && (selectedRadarLane === 'All' || selectedRadarLane === 'East') && (
                 <motion.circle
-                  cy="92" r="2.5" fill="#10b981"
+                  cy="92" r="2.8" fill="#10b981"
                   initial={{ cx: 190 }}
                   animate={{ cx: [190, 115, 85, 10] }}
-                  transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.East * 0.25), ease: "linear" }}
+                  transition={{ repeat: Infinity, duration: Math.max(1.0, 4.0 - vehicleCounts.East * 0.15), ease: "linear" }}
                 />
               )}
-              {/* West Lane vehicles flowing eastward */}
-              {vehicleCounts.West > 0 && (
+              {vehicleCounts.West > 0 && (selectedRadarLane === 'All' || selectedRadarLane === 'West') && (
                 <motion.circle
-                  cy="108" r="2.5" fill="#ec4899"
+                  cy="108" r="2.8" fill="#ec4899"
                   initial={{ cx: 10 }}
                   animate={{ cx: [10, 85, 115, 190] }}
-                  transition={{ repeat: Infinity, duration: Math.max(1.2, 4.5 - vehicleCounts.West * 0.25), ease: "linear" }}
+                  transition={{ repeat: Infinity, duration: Math.max(1.0, 4.0 - vehicleCounts.West * 0.15), ease: "linear" }}
                 />
               )}
+
+              {/* Lane labels on radar canvas */}
+              <text x="100" y="14" textAnchor="middle" fill="#94a3b8" fontSize="6" fontWeight="bold" fontFamily="monospace">N: {vehicleCounts.North}v</text>
+              <text x="100" y="196" textAnchor="middle" fill="#94a3b8" fontSize="6" fontWeight="bold" fontFamily="monospace">S: {vehicleCounts.South}v</text>
+              <text x="188" y="103" textAnchor="end" fill="#94a3b8" fontSize="6" fontWeight="bold" fontFamily="monospace">E: {vehicleCounts.East}v</text>
+              <text x="12" y="103" textAnchor="start" fill="#94a3b8" fontSize="6" fontWeight="bold" fontFamily="monospace">W: {vehicleCounts.West}v</text>
             </svg>
+
             <div className="absolute bottom-2 left-2 right-2 flex justify-between text-[8px] font-mono text-slate-500">
               <span>LATENCY: ~30ms</span>
               <span>ESTIMATE: {trafficData.congestion_level === 'UNAVAILABLE' ? 'UNAVAILABLE' : (trafficData.congestion_level || 'Loading...')}</span>
             </div>
           </div>
-          <div className="w-full text-center mt-3 text-xs text-slate-400">
-            Active green path: <span className="font-semibold text-emerald-400">{trafficData.active_lane || '--'} Lane</span>
+
+          {/* Interactive Lane Telemetry Footer */}
+          <div className="w-full mt-3 pt-2.5 border-t border-white/[0.05] flex items-center justify-between text-xs">
+            {selectedRadarLane === 'All' ? (
+              <div className="w-full flex items-center justify-between text-slate-400">
+                <span>Active green corridor: <strong className="text-emerald-400">{trafficData.active_lane || '--'} Lane</strong></span>
+                <span className="font-mono text-[11px] text-amber-400">{greenTimes[trafficData.active_lane] || 0}s allocated</span>
+              </div>
+            ) : (
+              <div className="w-full flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${trafficData.active_lane === selectedRadarLane ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                  <span className="font-semibold text-slate-200">{selectedRadarLane} Corridor:</span>
+                  <span className="font-mono text-amber-400">{vehicleCounts[selectedRadarLane] || 0} vehicles ({greenTimes[selectedRadarLane] || 0}s)</span>
+                </div>
+                <button
+                  onClick={() => handleTriggerEmergency(selectedRadarLane)}
+                  className="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-mono font-bold transition-all"
+                >
+                  Preempt {selectedRadarLane}
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
 
