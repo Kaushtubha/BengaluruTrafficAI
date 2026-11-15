@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import ParticleBackground from './ParticleBackground';
 import CommandPalette from './CommandPalette';
+import IncidentTicker from './IncidentTicker';
 
 const NAV = [
   { name: 'Junction Dashboard', path: '/', icon: LayoutDashboard, sub: 'Junction flow & timings' },
@@ -315,6 +316,9 @@ export default function Layout({ children }) {
       {/* ── Main content ───────────────────────────────────────── */}
       <main className="flex-1 md:pl-64 pt-14 md:pt-0 min-h-screen flex flex-col z-10 relative">
         <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-7 md:py-9">
+          {/* Live Incident Alert Ticker */}
+          <IncidentTicker />
+
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
