@@ -27,7 +27,7 @@
   <img src="https://img.shields.io/badge/Vite-5.2-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 5.2" />
   <img src="https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 3.4" />
   <img src="https://img.shields.io/badge/scikit--learn-1.9-F7931E?style=flat-square&logo=scikit-learn&logoColor=white" alt="scikit-learn 1.9" />
-  <img src="https://img.shields.io/badge/Tests-46%20Passed-10B981?style=flat-square&logo=pytest&logoColor=white" alt="Tests Passed" />
+  <img src="https://img.shields.io/badge/Tests-68%20Passed-10B981?style=flat-square&logo=pytest&logoColor=white" alt="Tests Passed" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License" />
 </p>
 
@@ -478,6 +478,127 @@ GET /api/driver_advice?corridor=North&lat=12.9352&lon=77.6245
     "monitored_corridors": ["North", "South", "East", "West"],
     "unmonitored_routes": "DATA_UNAVAILABLE"
   }
+}
+```
+
+### 7. Violation Audit History & Pagination
+```http
+GET /api/violations/history?category=red_light&limit=10&offset=0
+```
+* **Query Parameters**:
+  * `category` *(optional, string)*: Filter by violation category (`red_light`, `wrong_side`, `speeding`, `no_helmet`).
+  * `limit` *(optional, int)*: Maximum records to return (1-100, default `20`).
+  * `offset` *(optional, int)*: Record pagination offset (default `0`).
+```json
+{
+  "status": "success",
+  "total_matching": 42,
+  "limit": 10,
+  "offset": 0,
+  "records": [
+    {
+      "id": "BLR-20261116-1004",
+      "category": "red_light",
+      "label": "Red Light Jumping",
+      "lane": "North",
+      "vehicle_type": "Motorcycle",
+      "confidence": 0.94,
+      "timestamp": "2026-11-16T15:10:04.120Z",
+      "action_taken": "E-CHALLAN_QUEUED",
+      "fine_amount_inr": 1000
+    }
+  ],
+  "available_categories": ["red_light", "wrong_side", "speeding", "no_helmet"]
+}
+```
+
+### 8. Consolidated Junction Telemetry Summary
+```http
+GET /api/telemetry/summary
+```
+Aggregates queue balance index, safety compliance rating, and MUTCD clearance sequences:
+```json
+{
+  "status": "success",
+  "timestamp": "2026-11-16T15:12:00.000Z",
+  "mode": "demo",
+  "junction": {
+    "name": "Silk Board, Bengaluru",
+    "latitude": 12.9176,
+    "longitude": 77.6238,
+    "status": "operational"
+  },
+  "throughput": {
+    "current_frame_vehicles": 48,
+    "cumulative_tracked_vehicles": 1420,
+    "lane_counts": { "North": 18, "South": 14, "East": 10, "West": 6 },
+    "lane_load_percentage": { "North": 37.5, "South": 29.2, "East": 20.8, "West": 12.5 }
+  },
+  "traffic_quality": {
+    "congestion_level": "Medium",
+    "queue_balance_index": 0.824,
+    "balance_status": "optimal",
+    "safety_compliance_score": 96.8,
+    "safety_rating": "grade_a"
+  },
+  "signal_state": {
+    "active_lane": "North",
+    "emergency_preemption_active": false,
+    "emergency_lane": null,
+    "phases_in_cycle": 4,
+    "phase_schedule": [
+      {
+        "lane": "North",
+        "green_sec": 38.0,
+        "yellow_sec": 3.5,
+        "all_red_sec": 1.5,
+        "phase_duration_sec": 43.0,
+        "start_time_sec": 0.0,
+        "end_time_sec": 43.0,
+        "is_emergency_priority": false
+      }
+    ]
+  }
+}
+```
+
+### 9. System Runtime Diagnostics & Health Inspector
+```http
+GET /api/diagnostics
+```
+Provides backend process uptime, memory telemetry, rate limiter state, and registered route map:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-11-16T15:12:30.000Z",
+  "process": {
+    "pid": 14820,
+    "python_version": "3.11.8",
+    "platform": "Windows-11",
+    "uptime_seconds": 3840,
+    "uptime_human": "1h 4m 0s",
+    "memory": { "rss_mb": 42.1, "vms_mb": 118.4, "provider": "psutil" }
+  },
+  "execution": {
+    "mode": "demo",
+    "cloud_provider": "Render"
+  },
+  "subsystems": {
+    "audit_logger": { "status": "operational", "buffered_event_count": 14 },
+    "rate_limiter": { "status": "operational", "strategy": "sliding_window_in_memory" }
+  },
+  "api_endpoints": [
+    "/api/diagnostics",
+    "/api/driver_advice",
+    "/api/health",
+    "/api/lanes",
+    "/api/signal",
+    "/api/simulate_emergency",
+    "/api/status",
+    "/api/telemetry/summary",
+    "/api/violations",
+    "/api/violations/history"
+  ]
 }
 ```
 
