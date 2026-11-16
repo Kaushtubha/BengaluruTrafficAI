@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import cv2
 import threading
 import math
@@ -39,6 +40,7 @@ from junction_config import get_junction_config, validate_coordinates
 from security import global_rate_limiter, sanitize_text, sanitize_integer
 from logger_service import audit_logger
 from telemetry_service import build_telemetry_summary
+from diagnostics_service import get_system_diagnostics
 
 app = Flask(__name__)
 CORS(app)
@@ -68,6 +70,7 @@ VEHICLE_CLASSES = {
 
 tracked_vehicle_ids = set()
 simulated_emergency_lane = None
+_server_start_time = time.time()
 
 traffic_state = {
     "status": "online",
@@ -354,6 +357,22 @@ def get_telemetry_summary():
         mode="live_cv"
     )
     return jsonify(summary)
+
+
+@app.route('/api/diagnostics', methods=['GET'])
+def get_diagnostics():
+    from db_logger import db_active
+    routes = [rule.rule for rule in app.url_map.iter_rules() if not rule.rule.startswith('/static')]
+    diag = get_system_diagnostics(
+        start_time=_server_start_time,
+        mode="live_cv",
+        extra_subsystems={
+            "database": {"status": "mongodb_connected" if db_active else "console_fallback"},
+            "ai_detector": {"status": "yolov8_loaded", "model": "yolov8n.pt"}
+        },
+        routes=sorted(routes)
+    )
+    return jsonify(diag)
 
 
 @app.route('/api/driver_advice', methods=['GET'])

@@ -18,10 +18,12 @@ try:
     from backend.security import global_rate_limiter, sanitize_text, sanitize_integer
     from backend.logger_service import audit_logger
     from backend.telemetry_service import build_telemetry_summary
+    from backend.diagnostics_service import get_system_diagnostics
 except ImportError:
     from security import global_rate_limiter, sanitize_text, sanitize_integer
     from logger_service import audit_logger
     from telemetry_service import build_telemetry_summary
+    from diagnostics_service import get_system_diagnostics
 
 app = Flask(__name__)
 CORS(app)
@@ -277,6 +279,20 @@ def get_telemetry_summary():
         mode="demo"
     )
     return jsonify(summary)
+
+@app.route('/api/diagnostics', methods=['GET'])
+def get_diagnostics():
+    routes = [rule.rule for rule in app.url_map.iter_rules() if not rule.rule.startswith('/static')]
+    diag = get_system_diagnostics(
+        start_time=_start_time,
+        mode="demo",
+        extra_subsystems={
+            "database": {"status": "synthetic_in_memory", "provider": "demo_engine"},
+            "ai_detector": {"status": "simulated_heuristic", "target": "silk_board"}
+        },
+        routes=sorted(routes)
+    )
+    return jsonify(diag)
 
 @app.route('/api/driver_advice', methods=['GET'])
 def get_driver_advice():
