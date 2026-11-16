@@ -11,6 +11,8 @@ from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from junction_config import get_junction_config, validate_coordinates
+
 app = Flask(__name__)
 CORS(app)
 
@@ -163,48 +165,14 @@ def simulate_emergency():
 def health():
     return jsonify({"status": "ok", "mode": "demo", "uptime_seconds": int(time.time() - _start_time)})
 
-def _calculate_haversine(lat1, lon1, lat2, lon2):
-    R = 6371.0  # Earth radius in kilometers
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat / 2) ** 2 +
-         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
-         math.sin(dlon / 2) ** 2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return round(R * c, 2)
-
-
 @app.route('/api/driver_advice', methods=['GET'])
 def get_driver_advice():
     # 1. Configurable Junction Identity & Coordinate Validation
-    junction_name = os.environ.get("JUNCTION_NAME", JUNCTIONS)
-    junction_lat_env = os.environ.get("JUNCTION_LAT")
-    junction_lon_env = os.environ.get("JUNCTION_LON")
-
-    junction_config_error = None
-    if junction_lat_env is not None or junction_lon_env is not None:
-        try:
-            j_lat_str = str(junction_lat_env).strip()
-            j_lon_str = str(junction_lon_env).strip()
-            if len(j_lat_str) > 32 or len(j_lon_str) > 32:
-                junction_config_error = "Configured junction coordinates exceed maximum allowed length of 32 characters"
-                junction_lat, junction_lon = None, None
-            else:
-                j_lat = float(j_lat_str)
-                j_lon = float(j_lon_str)
-                if math.isnan(j_lat) or math.isnan(j_lon) or math.isinf(j_lat) or math.isinf(j_lon):
-                    junction_config_error = "Configured junction coordinates have invalid numeric format"
-                    junction_lat, junction_lon = None, None
-                elif not (-90.0 <= j_lat <= 90.0 and -180.0 <= j_lon <= 180.0):
-                    junction_config_error = f"Configured junction coordinates out of range (-90..90, -180..180): lat={j_lat}, lon={j_lon}"
-                    junction_lat, junction_lon = None, None
-                else:
-                    junction_lat, junction_lon = j_lat, j_lon
-        except (ValueError, TypeError):
-            junction_config_error = "Configured junction coordinates have invalid numeric format"
-            junction_lat, junction_lon = None, None
-    else:
-        junction_lat, junction_lon = 12.9176, 77.6238
+    junction = get_junction_config()
+    junction_name = junction["name"]
+    junction_lat = junction["latitude"]
+    junction_lon = junction["longitude"]
+    junction_config_error = junction["configuration_error"]
 
     lane_counts = _generate_lane_counts()
     total = sum(lane_counts.values()) if isinstance(lane_counts, dict) else None
@@ -234,34 +202,7 @@ def get_driver_advice():
     # 3. GPS Coordinates Validation & Distance
     lat_param = request.args.get('lat')
     lon_param = request.args.get('lon')
-    distance_km = None
-
-    if lat_param is not None and lon_param is None:
-        distance_status = "INCOMPLETE_COORDINATES_MISSING_LON"
-    elif lat_param is None and lon_param is not None:
-        distance_status = "INCOMPLETE_COORDINATES_MISSING_LAT"
-    elif lat_param is not None and lon_param is not None:
-        lat_str = str(lat_param).strip()
-        lon_str = str(lon_param).strip()
-        if len(lat_str) > 32 or len(lon_str) > 32:
-            distance_status = "INVALID_COORDINATE_FORMAT"
-        else:
-            try:
-                driver_lat = float(lat_str)
-                driver_lon = float(lon_str)
-                if math.isnan(driver_lat) or math.isnan(driver_lon) or math.isinf(driver_lat) or math.isinf(driver_lon):
-                    distance_status = "INVALID_COORDINATE_FORMAT"
-                elif not (-90.0 <= driver_lat <= 90.0 and -180.0 <= driver_lon <= 180.0):
-                    distance_status = "COORDINATES_OUT_OF_RANGE"
-                elif junction_lat is None or junction_lon is None:
-                    distance_status = "JUNCTION_COORDINATES_CONFIG_ERROR"
-                else:
-                    distance_km = _calculate_haversine(driver_lat, driver_lon, junction_lat, junction_lon)
-                    distance_status = "CALCULATED"
-            except (ValueError, TypeError):
-                distance_status = "INVALID_COORDINATE_FORMAT"
-    else:
-        distance_status = "COORDINATES_NOT_PROVIDED"
+    distance_km, distance_status = validate_coordinates(lat_param, lon_param, junction_lat, junction_lon)
 
     # 4. Extract metrics cleanly without silent zero substitution
     corridor_count = lane_counts.get(corridor) if isinstance(lane_counts, dict) and corridor in lane_counts else None
