@@ -1,7 +1,14 @@
 import math
-import numpy as np
 from datetime import datetime
-from sklearn.ensemble import RandomForestClassifier
+
+try:
+    import numpy as np
+    from sklearn.ensemble import RandomForestClassifier
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+    np = None
+    RandomForestClassifier = None
 
 # Model Provenance & Transparency Metadata
 # Note: This classifier is trained on synthetic rule-generated thresholds.
@@ -14,31 +21,39 @@ LEVELS = {0: "Low", 1: "Medium", 2: "High"}
 # Generate synthetic representative traffic data with dense single-vehicle steps
 # to preserve exact boundary transitions:
 # < 15: Low (0), 15 - 34: Medium (1), >= 35: High (2)
-X_train = []
-y_train = []
+model = None
 
-for hour in range(24):
-    for total_vehicles in range(0, 121):
-        active_lane_count = int(total_vehicles * 0.4)
-        X_train.append([hour, total_vehicles, active_lane_count])
-        if total_vehicles < 15:
-            y_train.append(0)
-        elif total_vehicles < 35:
-            y_train.append(1)
-        else:
-            y_train.append(2)
+if HAS_SKLEARN:
+    X_train = []
+    y_train = []
 
-X_train = np.array(X_train)
-y_train = np.array(y_train)
+    for hour in range(24):
+        for total_vehicles in range(0, 121):
+            active_lane_count = int(total_vehicles * 0.4)
+            X_train.append([hour, total_vehicles, active_lane_count])
+            if total_vehicles < 15:
+                y_train.append(0)
+            elif total_vehicles < 35:
+                y_train.append(1)
+            else:
+                y_train.append(2)
 
-# Fit Random Forest Classifier
-model = RandomForestClassifier(n_estimators=10, random_state=42)
-model.fit(X_train, y_train)
+    X_train = np.array(X_train)
+    y_train = np.array(y_train)
 
-try:
-    print("[ML] Congestion Classifier trained on synthetic rule data (Heuristic Estimate).")
-except UnicodeEncodeError:
-    print("[ML] Congestion Classifier trained on synthetic rule data.")
+    # Fit Random Forest Classifier
+    model = RandomForestClassifier(n_estimators=10, random_state=42)
+    model.fit(X_train, y_train)
+
+    try:
+        print("[ML] Congestion Classifier trained on synthetic rule data (Random Forest).")
+    except UnicodeEncodeError:
+        print("[ML] Congestion Classifier trained on synthetic rule data.")
+else:
+    try:
+        print("[ML] scikit-learn not detected. Using zero-dependency pure-Python heuristic rule engine.")
+    except UnicodeEncodeError:
+        print("[ML] Using zero-dependency heuristic rule engine.")
 
 
 def _sanitize_inputs(hour, total_vehicles, active_lane_count):
@@ -85,6 +100,15 @@ def _sanitize_inputs(hour, total_vehicles, active_lane_count):
     return hr, tot, act
 
 
+def _predict_rule_based(total_vehicles: float) -> str:
+    """Deterministic boundary classifier matching the synthetic training matrix."""
+    if total_vehicles < 15:
+        return "Low"
+    elif total_vehicles < 35:
+        return "Medium"
+    return "High"
+
+
 def predict_congestion(hour=None, total_vehicles=None, active_lane_count=None) -> str:
     """
     Predict congestion level based on vehicle count features.
@@ -97,13 +121,17 @@ def predict_congestion(hour=None, total_vehicles=None, active_lane_count=None) -
         return "UNAVAILABLE"
 
     hr, tot, act = sanitized
-    try:
-        features = np.array([[hr, tot, act]])
-        prediction = model.predict(features)[0]
-        return LEVELS.get(prediction, "Medium")
-    except Exception as e:
-        print(f"[ML] Heuristic congestion prediction failed: {e}")
-        return "UNAVAILABLE"
+
+    if model is not None and np is not None:
+        try:
+            features = np.array([[hr, tot, act]])
+            prediction = model.predict(features)[0]
+            return LEVELS.get(prediction, "Medium")
+        except Exception as e:
+            print(f"[ML] Random Forest prediction fallback to rule engine: {e}")
+            return _predict_rule_based(tot)
+
+    return _predict_rule_based(tot)
 
 
 def get_congestion_details(hour=None, total_vehicles=None, active_lane_count=None) -> dict:
