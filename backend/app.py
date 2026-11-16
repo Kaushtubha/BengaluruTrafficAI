@@ -36,9 +36,25 @@ from congestion_predictor import predict_congestion
 from tracker_manager import tracker
 from lane_manager import get_lane
 from junction_config import get_junction_config, validate_coordinates
+from security import global_rate_limiter, sanitize_text, sanitize_integer
+from logger_service import audit_logger
 
 app = Flask(__name__)
 CORS(app)
+
+@app.before_request
+def enforce_rate_limits():
+    """Protect API endpoints against excessive request bursts."""
+    if request.method == "OPTIONS":
+        return None
+    client_ip = request.remote_addr or "127.0.0.1"
+    allowed, status = global_rate_limiter.is_allowed(client_ip)
+    if not allowed:
+        return jsonify({
+            "status": "error",
+            "message": "Too many requests. Rate limit exceeded.",
+            "retry_after_seconds": status.get("retry_after_seconds", 60)
+        }), 429
 
 model = YOLO(os.path.join(BASE_DIR, "yolov8n.pt"))
 

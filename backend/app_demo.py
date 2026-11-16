@@ -13,8 +13,29 @@ from flask_cors import CORS
 
 from junction_config import get_junction_config, validate_coordinates
 
+try:
+    from backend.security import global_rate_limiter, sanitize_text, sanitize_integer
+    from backend.logger_service import audit_logger
+except ImportError:
+    from security import global_rate_limiter, sanitize_text, sanitize_integer
+    from logger_service import audit_logger
+
 app = Flask(__name__)
 CORS(app)
+
+@app.before_request
+def enforce_rate_limits():
+    """Protect API endpoints against excessive request bursts."""
+    if request.method == "OPTIONS":
+        return None
+    client_ip = request.remote_addr or "127.0.0.1"
+    allowed, status = global_rate_limiter.is_allowed(client_ip)
+    if not allowed:
+        return jsonify({
+            "status": "error",
+            "message": "Too many requests. Rate limit exceeded.",
+            "retry_after_seconds": status.get("retry_after_seconds", 60)
+        }), 429
 
 # ── Simulation Config ────────────────────────────────────────────────
 LANES = ["North", "South", "East", "West"]
@@ -153,12 +174,15 @@ def get_violations():
 def simulate_emergency():
     global _last_emergency
     data = request.json or {}
-    lane = data.get('lane')
+    raw_lane = data.get('lane')
+    lane = sanitize_text(raw_lane, max_length=16) if raw_lane else None
     if lane in LANES:
         _last_emergency = lane
+        audit_logger.log_event("WARNING", "EMERGENCY_OVERRIDE_ACTIVATED", {"lane": lane})
         return jsonify({"status": "success", "message": f"Emergency vehicle simulated in {lane} lane."})
     else:
         _last_emergency = None
+        audit_logger.log_event("INFO", "EMERGENCY_OVERRIDE_CLEARED", {})
         return jsonify({"status": "success", "message": "Emergency override cleared."})
 
 @app.route('/api/health', methods=['GET'])
