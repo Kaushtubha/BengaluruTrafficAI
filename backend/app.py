@@ -31,7 +31,7 @@ from helmet_detector import (
     check_helmet_violation,
     get_helmet_violation_count
 )
-from db_logger import log_violation, log_traffic_stats
+from db_logger import log_violation, log_traffic_stats, get_violations_from_db
 from congestion_predictor import predict_congestion
 from tracker_manager import tracker
 from lane_manager import get_lane
@@ -295,6 +295,24 @@ def get_violations():
         "wrong_side": get_wrong_side_count(),
         "speeding": get_speed_violation_count(),
         "no_helmet": get_helmet_violation_count()
+    })
+
+
+@app.route('/api/violations/history', methods=['GET'])
+def get_violation_history():
+    category = sanitize_text(request.args.get('category'), max_length=32)
+    limit = sanitize_integer(request.args.get('limit', 20), min_val=1, max_val=100, default=20)
+    offset = sanitize_integer(request.args.get('offset', 0), min_val=0, max_val=10000, default=0)
+
+    db_records = get_violations_from_db(limit=limit, category=category if category else None, offset=offset)
+
+    return jsonify({
+        "status": "success",
+        "total_matching": len(db_records),
+        "limit": limit,
+        "offset": offset,
+        "records": db_records,
+        "available_categories": ["red_light", "wrong_side", "speeding", "no_helmet"]
     })
 
 

@@ -7,7 +7,8 @@ import os
 import random
 import math
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+from collections import deque
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -46,6 +47,34 @@ _start_time = time.time()
 _tracked_total = 0
 _violations = {"red_light": 0, "wrong_side": 0, "speeding": 0, "no_helmet": 0}
 _last_emergency = None
+_violation_history = deque(maxlen=250)
+_violation_seq = 1000
+
+def _seed_violation_history():
+    """Seed buffer with initial violation log entries."""
+    global _violation_seq
+    sample_types = [
+        ("red_light", "Red Light Jumping", "North", "Motorcycle", 1000, 0.94),
+        ("speeding", "Overspeeding (>60 km/h)", "East", "Car", 1000, 0.91),
+        ("no_helmet", "Riding Without Helmet", "South", "Motorcycle", 500, 0.96),
+        ("wrong_side", "Wrong-Way Driving", "West", "Auto Rickshaw", 1500, 0.88),
+    ]
+    for v_type, label, lane, veh, fine, conf in sample_types:
+        _violation_seq += 1
+        _violations[v_type] += 1
+        _violation_history.appendleft({
+            "id": f"BLR-{datetime.now().strftime('%Y%m%d')}-{_violation_seq:04d}",
+            "category": v_type,
+            "label": label,
+            "lane": lane,
+            "vehicle_type": veh,
+            "confidence": conf,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "action_taken": "E-CHALLAN_QUEUED",
+            "fine_amount_inr": fine,
+        })
+
+_seed_violation_history()
 
 def _time_factor():
     """Simulate rush hour patterns based on current hour."""
@@ -109,16 +138,34 @@ def _get_signal_plan(lane_counts, emergency_lane=None):
     }
 
 def _maybe_log_violation():
-    """Probabilistically add violations to simulate live detection."""
+    """Probabilistically add violations to simulate live detection and history."""
+    global _violation_seq
     factor = _time_factor()
-    if random.random() < 0.03 * factor:
-        _violations["red_light"] += 1
-    if random.random() < 0.015 * factor:
-        _violations["wrong_side"] += 1
-    if random.random() < 0.04 * factor:
-        _violations["speeding"] += 1
-    if random.random() < 0.02 * factor:
-        _violations["no_helmet"] += 1
+    events = [
+        ("red_light", 0.03 * factor, "Red Light Jumping", 1000, 0.95),
+        ("wrong_side", 0.015 * factor, "Wrong-Way Driving", 1500, 0.91),
+        ("speeding", 0.04 * factor, "Overspeeding (>60 km/h)", 1000, 0.89),
+        ("no_helmet", 0.02 * factor, "Riding Without Helmet", 500, 0.96),
+    ]
+    for v_type, prob, label, fine, conf in events:
+        if random.random() < prob:
+            _violations[v_type] += 1
+            _violation_seq += 1
+            lane = random.choice(LANES)
+            veh = random.choice(["Motorcycle", "Car", "Auto Rickshaw", "Bus"])
+            rec = {
+                "id": f"BLR-{datetime.now().strftime('%Y%m%d')}-{_violation_seq:04d}",
+                "category": v_type,
+                "label": label,
+                "lane": lane,
+                "vehicle_type": veh,
+                "confidence": round(conf + random.uniform(-0.04, 0.03), 2),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "action_taken": "E-CHALLAN_QUEUED",
+                "fine_amount_inr": fine,
+            }
+            _violation_history.appendleft(rec)
+            audit_logger.log_event("AUDIT", "VIOLATION_RECORDED", {"id": rec["id"], "category": v_type, "lane": lane})
 
 # ── API Routes ────────────────────────────────────────────────────────
 
@@ -168,6 +215,29 @@ def get_violations():
         "wrong_side":  _violations["wrong_side"],
         "speeding":    _violations["speeding"],
         "no_helmet":   _violations["no_helmet"]
+    })
+
+@app.route('/api/violations/history', methods=['GET'])
+def get_violation_history():
+    _maybe_log_violation()
+    category = sanitize_text(request.args.get('category'), max_length=32)
+    limit = sanitize_integer(request.args.get('limit', 20), min_val=1, max_val=100, default=20)
+    offset = sanitize_integer(request.args.get('offset', 0), min_val=0, max_val=10000, default=0)
+
+    records = list(_violation_history)
+    if category:
+        records = [r for r in records if r["category"].lower() == category.lower()]
+
+    total_matching = len(records)
+    paged = records[offset : offset + limit]
+
+    return jsonify({
+        "status": "success",
+        "total_matching": total_matching,
+        "limit": limit,
+        "offset": offset,
+        "records": paged,
+        "available_categories": list(_violations.keys())
     })
 
 @app.route('/api/simulate_emergency', methods=['POST'])

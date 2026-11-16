@@ -1,24 +1,35 @@
-from pymongo import MongoClient
-from datetime import datetime
 import os
-from dotenv import load_dotenv
+from datetime import datetime
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+try:
+    from pymongo import MongoClient
+    HAS_PYMONGO = True
+except ImportError:
+    HAS_PYMONGO = False
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 DB_NAME = os.getenv("DB_NAME", "bengaluru_traffic")
 
 db_active = False
-try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=1500)
-    client.server_info() # Check if connection succeeds
-    db = client[DB_NAME]
-    violations_collection = db["violations"]
-    traffic_collection = db["traffic_stats"]
-    db_active = True
-    print("✅ MongoDB connection active.")
-except Exception:
-    print("⚠️ MongoDB server is offline. Database logging disabled (will use console only).")
+if HAS_PYMONGO:
+    try:
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=1500)
+        client.server_info()  # Check if connection succeeds
+        db = client[DB_NAME]
+        violations_collection = db["violations"]
+        traffic_collection = db["traffic_stats"]
+        db_active = True
+        print("✅ MongoDB connection active.")
+    except Exception:
+        print("⚠️ MongoDB server is offline. Database logging disabled (will use console only).")
+else:
+    print("ℹ️ PyMongo not installed. Database logging disabled (using memory/console fallback).")
 
 
 def log_violation(violation: dict, snapshot_file: str = None):
@@ -58,13 +69,16 @@ def log_traffic_stats(vehicle_counts: dict, congestion_level: str):
     else:
         print(f"ℹ️ [Simulated DB Log] Traffic Stats - Total: {doc['total']} | Congestion: {congestion_level}")
 
-def get_violations_from_db(limit=20):
-    """Fetch recent violations from DB"""
+def get_violations_from_db(limit=20, category=None, offset=0):
+    """Fetch recent violations from DB with optional category filter and pagination."""
     if db_active:
         try:
+            query = {}
+            if category:
+                query["type"] = category
             results = violations_collection.find(
-                {}, {"_id": 0}
-            ).sort("created_at", -1).limit(limit)
+                query, {"_id": 0}
+            ).sort("created_at", -1).skip(offset).limit(limit)
             return list(results)
         except Exception:
             return []
