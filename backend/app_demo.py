@@ -17,9 +17,11 @@ from junction_config import get_junction_config, validate_coordinates
 try:
     from backend.security import global_rate_limiter, sanitize_text, sanitize_integer
     from backend.logger_service import audit_logger
+    from backend.telemetry_service import build_telemetry_summary
 except ImportError:
     from security import global_rate_limiter, sanitize_text, sanitize_integer
     from logger_service import audit_logger
+    from telemetry_service import build_telemetry_summary
 
 app = Flask(__name__)
 CORS(app)
@@ -258,6 +260,23 @@ def simulate_emergency():
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok", "mode": "demo", "uptime_seconds": int(time.time() - _start_time)})
+
+@app.route('/api/telemetry/summary', methods=['GET'])
+def get_telemetry_summary():
+    _maybe_log_violation()
+    counts = _generate_lane_counts()
+    junction = get_junction_config()
+    congestion = _get_congestion(sum(counts.values()))
+    summary = build_telemetry_summary(
+        junction_config=junction,
+        vehicle_counts=counts,
+        tracked_total=_tracked_total,
+        violations_summary=_violations,
+        congestion_level=congestion,
+        emergency_lane=_last_emergency,
+        mode="demo"
+    )
+    return jsonify(summary)
 
 @app.route('/api/driver_advice', methods=['GET'])
 def get_driver_advice():

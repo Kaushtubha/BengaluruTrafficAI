@@ -38,6 +38,7 @@ from lane_manager import get_lane
 from junction_config import get_junction_config, validate_coordinates
 from security import global_rate_limiter, sanitize_text, sanitize_integer
 from logger_service import audit_logger
+from telemetry_service import build_telemetry_summary
 
 app = Flask(__name__)
 CORS(app)
@@ -333,6 +334,26 @@ def simulate_emergency():
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok", "mode": "live_cv"})
+
+
+@app.route('/api/telemetry/summary', methods=['GET'])
+def get_telemetry_summary():
+    junction = get_junction_config()
+    summary = build_telemetry_summary(
+        junction_config=junction,
+        vehicle_counts=traffic_state.get("vehicle_counts", {}),
+        tracked_total=traffic_state.get("tracked_vehicles", 0),
+        violations_summary={
+            "red_light": get_violation_count(),
+            "wrong_side": get_wrong_side_count(),
+            "speeding": get_speed_violation_count(),
+            "no_helmet": get_helmet_violation_count(),
+        },
+        congestion_level=traffic_state.get("congestion_level", "Low"),
+        emergency_lane=traffic_state.get("emergency_lane"),
+        mode="live_cv"
+    )
+    return jsonify(summary)
 
 
 @app.route('/api/driver_advice', methods=['GET'])
