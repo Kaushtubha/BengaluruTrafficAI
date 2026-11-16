@@ -10,6 +10,8 @@ vehicle counts, with support for emergency-vehicle priority overrides.
 MIN_GREEN = 10   # seconds — minimum green time for any lane
 MAX_GREEN = 60   # seconds — maximum green time for any lane
 BASE_GREEN = 20  # seconds — default green time when no vehicles are detected
+YELLOW_CLEARANCE = 3.5   # seconds — standard urban yellow change interval (IRC:93/MUTCD)
+ALL_RED_CLEARANCE = 1.5  # seconds — all-red intersection clearance buffer
 
 
 DEFAULT_LANES = ("North", "South", "East", "West")
@@ -67,6 +69,48 @@ def get_priority_lane(vehicle_counts: dict) -> str:
         return next(iter(vehicle_counts), DEFAULT_LANES[0])
 
 
+def get_phase_schedule(vehicle_counts: dict, emergency_lanes=None) -> list:
+    """
+    Generate sequential phase schedule with green, yellow, and all-red clearance intervals.
+
+    Returns:
+        list[dict]: Ordered phase sequence with start/end offsets and durations.
+    """
+    counts = vehicle_counts if isinstance(vehicle_counts, dict) and vehicle_counts else {l: 0 for l in DEFAULT_LANES}
+    plan = get_signal_plan(counts, emergency_lanes=emergency_lanes)
+    green_times = plan["green_times"]
+    emergency_lane = plan.get("emergency_lane")
+
+    # Sequence phases: if emergency override is active, put emergency lane first
+    lanes = list(DEFAULT_LANES)
+    if emergency_lane and emergency_lane in lanes:
+        lanes.remove(emergency_lane)
+        lanes.insert(0, emergency_lane)
+
+    schedule = []
+    current_time = 0.0
+
+    for lane in lanes:
+        green = float(green_times.get(lane, BASE_GREEN))
+        yellow = float(YELLOW_CLEARANCE)
+        all_red = float(ALL_RED_CLEARANCE)
+        phase_total = round(green + yellow + all_red, 1)
+
+        schedule.append({
+            "lane": lane,
+            "green_sec": green,
+            "yellow_sec": yellow,
+            "all_red_sec": all_red,
+            "phase_duration_sec": phase_total,
+            "start_time_sec": round(current_time, 1),
+            "end_time_sec": round(current_time + phase_total, 1),
+            "is_emergency_priority": bool(emergency_lane and lane.lower() == emergency_lane.lower()),
+        })
+        current_time += phase_total
+
+    return schedule
+
+
 def get_signal_plan(vehicle_counts: dict, emergency_lanes=None) -> dict:
     """
     Build a complete signal plan, giving priority to emergency vehicles.
@@ -111,12 +155,17 @@ def get_signal_plan(vehicle_counts: dict, emergency_lanes=None) -> dict:
         except UnicodeEncodeError:
             print(f"[EMERGENCY] Vehicle detected in {priority} lane! Signal plan overridden.")
 
+    green_sum = round(sum(green_times.values()), 1)
+
     return {
         "green_times": green_times,
         "priority_lane": priority,
-        "cycle_time": round(sum(green_times.values()), 1),
+        "cycle_time": green_sum,
         "emergency_override": is_override,
         "emergency_lane": active_emergency_lane if is_override else None,
+        "yellow_clearance_sec": YELLOW_CLEARANCE,
+        "all_red_clearance_sec": ALL_RED_CLEARANCE,
+        "total_clearance_overhead_sec": round(len(green_times) * (YELLOW_CLEARANCE + ALL_RED_CLEARANCE), 1),
     }
 
 
